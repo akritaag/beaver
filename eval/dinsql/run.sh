@@ -1,0 +1,116 @@
+#!/bin/bash
+
+# ============================================================================
+# DIN-SQL Evaluation Pipeline for Beaver
+# Usage: ./run.sh --model gpt-5.2 --dataset dw --setting 0
+# ============================================================================
+
+# --- Argument Parsing ---
+MODEL="gpt-5.2"
+DATASET="dw"
+SETTING=0
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --model)   MODEL="$2";   shift 2 ;;
+        --dataset) DATASET="$2"; shift 2 ;;
+        --setting) SETTING="$2"; shift 2 ;;
+        --help|-h)
+            echo "Usage: ./run.sh --model <model> --dataset <dataset> --setting <0|1|2>"
+            echo ""
+            echo "Arguments:"
+            echo "  --model    LLM model name (default: gpt-5.2)"
+            echo "  --dataset  Dataset split name, e.g. dw, sp, nova, neutron (default: dw)"
+            echo "  --setting  Hint setting: 0=ETE, 1=schema hints, 2=all hints (default: 0)"
+            exit 0
+            ;;
+        *) echo "Unknown argument: $1"; exit 1 ;;
+    esac
+done
+
+# Map setting to internal option number (Python scripts use 1/2/3)
+OPTION=$((SETTING + 1))
+
+# --- Load .env ---
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "${script_dir}/../.env" ]; then
+    set -a
+    source "${script_dir}/../.env"
+    set +a
+fi
+
+# --- Check API keys ---
+if [ -z "$OPENAI_API_KEY" ] && [ -z "$OPENROUTER_API_KEY" ] && [ -z "$GOOGLE_API_KEY" ]; then
+    echo "Error: No LLM API key found. Set OPENAI_API_KEY, OPENROUTER_API_KEY, or GOOGLE_API_KEY in eval/.env"
+    exit 1
+fi
+
+# --- Derived Variables ---
+DEV="beaver_${DATASET}_opt${OPTION}"
+NUM_WORKERS=20
+
+# Data paths
+BEAVER_QUESTIONS="../../data/${DATASET}/dev_sampled.json"
+BEAVER_TABLES="../../data/${DATASET}/dev_tables.json"
+
+echo "========================================================================"
+echo "DINSQL on ${DATASET} - Setting ${SETTING} (option ${OPTION})"
+echo "Model: ${MODEL}"
+echo "Workers: ${NUM_WORKERS}"
+echo "========================================================================"
+
+# Step 1: Preprocess data
+echo ""
+echo "[Step 1/3] Preprocessing Beaver data for Setting ${SETTING}..."
+echo "------------------------------------------------------------------------"
+
+python3 preprocessed_data/beaver_preprocess_v2.py \
+    --option ${OPTION} \
+    --questions_file ${BEAVER_QUESTIONS} \
+    --tables_file ${BEAVER_TABLES} \
+    --split ${DATASET}
+
+if [ $? -ne 0 ]; then
+    echo "Error during preprocessing. Exiting."
+    exit 1
+fi
+
+# Step 2: Run DINSQL
+echo ""
+echo "[Step 2/3] Running DINSQL SQL generation..."
+echo "------------------------------------------------------------------------"
+echo "Using preprocessed data from: preprocessed_data/${DEV}/"
+
+python3 DIN-SQL-beaver-v2.py \
+    --dev ${DEV} \
+    --model ${MODEL} \
+    --temperature 0 \
+    --n 1 \
+    --processes ${NUM_WORKERS} \
+    --output_dir "output/${MODEL}-beaver-${DATASET}-setting${SETTING}"
+
+if [ $? -ne 0 ]; then
+    echo "Error during SQL generation. Exiting."
+    exit 1
+fi
+
+# Step 3: Evaluate results
+echo ""
+echo "[Step 3/3] Evaluating results with ReFoRCE comparison logic..."
+echo "------------------------------------------------------------------------"
+
+DEV_FILE="preprocessed_data/${DEV}/${DEV}_preprocessed.json"
+TABLES_FILE=${BEAVER_TABLES}
+
+python3 evaluate_beaver_reforce.py \
+    --dev ${DEV} \
+    --dev_file ${DEV_FILE} \
+    --tables_file ${TABLES_FILE} \
+    --output_dir "output/${MODEL}-beaver-${DATASET}-setting${SETTING}" \
+    --db_id ${DATASET}
+
+echo ""
+echo "========================================================================"
+echo "DIN-SQL on ${DATASET} Setting ${SETTING} Complete!"
+echo "Model: ${MODEL}"
+echo "========================================================================"

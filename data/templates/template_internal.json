@@ -1,0 +1,192 @@
+[
+  {
+    "examples": [
+      "\"Benedict\" is predicated by \"TABLE.FIRST_NAME = 'Benedict'\"",
+      "\"Crystal\" is predicated by \"TABLE.FIRST_NAME = 'Crystal'\"",
+      "\"Kitty\" is predicated by \"TABLE.FIRST_NAME = 'Kitty'\"",
+      "\"Jade\" is predicated by \"TABLE.FIRST_NAME = 'Jade'\"",
+      "\"Darren\" is predicated by \"TABLE.FIRST_NAME = 'Darren'\"",
+
+      "\"Brooklyn\" is predicated by \"TABLE.FIRST_NAME = 'Brooklyn'\"",
+      "\"Velma\" is predicated by \"TABLE.FIRST_NAME = 'Velma'\"",
+      "\"Rayhan\" is predicated by \"TABLE.FIRST_NAME = 'Rayhan'\"",
+      "\"Zoe\" is predicated by \"TABLE.FIRST_NAME = 'Zoe'\"",
+      "\"Pauline\" is predicated by \"TABLE.FIRST_NAME = 'Pauline'\"",
+
+      "\"Ayden Hopkins\" is predicated by \"TABLE.FULL_NAME = 'Hopkins, Ayden'\"",
+      "\"Summer Haynes\" is predicated by \"TABLE.FULL_NAME = 'Haynes, Summer'\"",
+      "\"Elisha Alexander\" is predicated by \"TABLE.FULL_NAME = 'Alexander, Elisha'\"",
+      "\"Eve Young\" is predicated by \"TABLE.FULL_NAME = 'Young, Eve'\"",
+      "\"Sasha Austin\" is predicated by \"TABLE.FULL_NAME = 'Austin, Sasha'\"",
+
+      "\"Willie Downs\" is predicated by \"TABLE.FULL_NAME = 'Downs, Willie'\"",
+      "\"Halima Bruce\" is predicated by \"TABLE.FULL_NAME = 'Bruce, Halima'\"",
+      "\"Lowri Mclaughlin\" is predicated by \"TABLE.FULL_NAME = 'Mclaughlin, Lowri'\"",
+      "\"Harrison Henry\" is predicated by \"TABLE.FULL_NAME = 'Henry, Harrison'\"",
+      "\"Taha Weaver\" is predicated by \"TABLE.FULL_NAME = 'Weaver, Taha'\""
+
+    ],
+    "explanation": "This type of internal evidence explains how specific individuals are identified and filtered based on their name attributes in the SQL."
+  },
+  {
+    "examples": [
+      "\"Political Science\" is predicated by \"TABLE.DEPARTMENT_NAME = 'Political Science'\"",
+      "\"biology courses\" are predicated by \"TABLE.OFFER_DEPT_NAME = 'Biology'\"",
+      "\"Computer Science\" is predicated by \"TABLE.DEPARTMENT_NAME = 'Electrical Eng & Computer Sci'\"",
+      "\"Management department\" is predicated by \"UPPER(TABLE.SIS_ADMIN_DEPARTMENT_NAME) = 'MANAGEMENT'\"",
+      "\"Mathematics\" is predicated by \"TABLE.DEPARTMENT_NAME = 'Mathematics'\"",
+  "\"Chemistry\" is predicated by \"TABLE.OFFER_DEPT_NAME = 'Chemistry'\"",
+  "\"Urban Planning\" is predicated by \"TABLE.DEPARTMENT_NAME = 'Urban Studies and Planning'\"",
+  "\"Mechanical Engineering\" is predicated by \"UPPER(TABLE.SIS_ADMIN_DEPARTMENT_NAME) = 'MECHANICAL ENGINEERING'\"",
+  "\"Physics\" is predicated by \"TABLE.DEPARTMENT_NAME = 'Physics'\"",
+  "\"Economics\" is predicated by \"TABLE.DEPARTMENT_NAME = 'Economics'\"",
+
+      "\"history department\" is predicated by \"LOWER(TABLE.DLC_NAME) = LOWER('History')\"",
+      "\"biology department\" is predicated by \"LOWER(TABLE.DLC_NAME) = LOWER('Biology')\"",
+      "\"biological engineering department\" is predicated by \"LOWER(TABLE.DLC_NAME) = LOWER('Biological Engineering')\"",
+      "\"BCS department\" is predicated by \"LOWER(TABLE.DLC_NAME) = LOWER('Brain & Cognitive Sciences')\"",
+
+      "\"Electrical Engineering and Computer Science department\" is predicated by \"TABLE.ORGANIZATION = 'Electrical Engineering-Computer Science'\"",
+      "\"department of facilities\" is predicated by \"TABLE.ORGANIZATION_NAME = 'DP OF FACILITIES'\"",
+      "\"admissions\" is predicated by \"TABLE.ORGANIZATION_NAME = 'ADMISSIONS'\"",
+      "\"anthropology\" is predicated by \"TABLE.ORGANIZATION_NAME = 'ANTHROPOLOGY'\"",
+
+      "\"humanities, arts, and social sciences\" are predicated by \"TABLE.CIS_ATTRIBUTE_GROUP = 'H'\"",
+      "\"IAP category\" is predicated by \"TABLE.IAP_SUBJECT_CATEGORY\"",
+
+      
+      "\"biology and chemistry department\" is predicated by \"TABLE.OFFER_DEPT_NAME IN ('Chemistry', 'Biology')\"",
+      
+
+      "\"except Cambridge-MIT Institute\" is predicated by \"TABLE.ORGANIZATION_NAME NOT IN ('CAMBRIDGE-MIT INST')\"",
+
+      "\"exclude organizations '139' and '250'\" is predicated by \"TABLE.ORGANIZATION_ID NOT IN ('139', '250')\""
+    ],
+    "explanation": "This type of internal evidence explains how academic units like departments, schools, and organizations are referenced and filtered in the SQL, often accounting for variations in naming conventions."
+  },
+  {
+    "examples": [
+      "\"Stata building\" is predicated by \"TABLE.BUILDING_NAME = 'Ray and Maria Stata Center'\"",
+      "\"The Simons Building\" is predicated by \"TABLE.BUILDING_NAME = 'THE SIMONS BUILDING'\"",
+      "\"Brown Building\" is predicated by \"TABLE.BUILDING_NAME = 'BROWN BUILDING'\"",
+      "\"Ashdown House\" is predicated by \"TABLE.BUILDING_NAME = 'ASHDOWN HOUSE'\"",
+
+      "\"Building 24\" is predicated by \"TABLE.BUILDING_NAME = 'BUILDING 24'\"",
+      "\"Fairchild Building\" is predicated by \"TABLE.BUILDING_NAME = 'FAIRCHILD BUILDING (36)'\"",
+      "\"Eastman Laboratories\" is predicated by \"TABLE.BUILDING_NAME = 'EASTMAN LABORATORIES'\"",
+      "\"Wiesner Building\" is predicated by \"TABLE.BUILDING_NAME = 'WIESNER BUILDING'\"",
+      "\"Muckley Building\" is predicated by \"TABLE.BUILDING_NAME = 'MUCKLEY BUILDING'\"",
+      "\"Landua Building\" is predicated by \"TABLE.BUILDING_NAME = 'LANDAU BUILDING'\"",
+
+      "\"building 45\" is predicated by \"TABLE.BUILDING_KEY = 45\"",
+      "\"building 2\" is predicated by \"TABLE.BUILDING_KEY = 2\"",
+      "\"building 32\" is predicated by \"TABLE.BUILDING_KEY = 32\"",
+      "\"building 26\" is predicated by \"TABLE.BUILDING_KEY = 26\"",
+      "\"building 39\" is predicated by \"TABLE.BUILDING_KEY = 39\"",
+      "\"building 36\" is predicated by \"TABLE.BUILDING_KEY = 36\"",
+      "\"building 68\" is predicated by \"TABLE.BUILDING_KEY = 68\"",
+      "\"building 76\" is predicated by \"TABLE.BUILDING_KEY = 76\"",
+      "\"building 37\" is predicated by \"TABLE.BUILDING_KEY = 37\"",
+      "\"building 4\" is predicated by \"TABLE.BUILDING_KEY = 4\"",
+
+      "\"residential\" is predicated by \"TABLE.BUILDING_TYPE = 'RESIDENT'\"",
+      "\"used as a residence\" is predicated by \"TABLE.BUILDING_USE = 'RESIDENT'\"",
+
+      "\"buildings at MIT\" is predicated by \"TABLE.SITE = 'MIT'\"",
+      "\"assignable\" is predicated by \"TABLE.ASSIGNABLE = 1\"",
+      "\"owned\" is predicated by \"TABLE.OWNERSHIP_TYPE = 'OWNED'\"",
+      "\"street address\" is predicated by \"TABLE.ADDRESS_PURPOSE = 'STREET'\"",
+      "\"exclude usage types that include 'STORAGE'\" is predicated by \"TABLE.SPACE_USAGE NOT LIKE '%STORAGE%'\"",
+
+      
+      "\"buildings\" is predicated by \"TABLE.PARENT_BUILDING_NUMBER\""
+    ],
+    "explanation": "This type of internal evidence explains how physical structures, spaces, and their properties (like usage, type, and address) are defined and queried in the SQL."
+  },
+  {
+    "examples": [
+      "\"keeper-zephyr\" is predicated by \"TABLE.MOIRA_LIST_NAME = 'keeper-zephyr'\"",
+      "\"beacon-date-date\" is predicated by \"TABLE.MOIRA_LIST_NAME = 'beacon-date-date'\"",
+      "\"kangaroo-inspire-yearn\" is predicated by \"TABLE.MOIRA_LIST_NAME = 'kangaroo-inspire-yearn'\"",
+      "\"ocean-apple\" is predicated by \"TABLE.MOIRA_LIST_NAME = 'ocean-apple'\"",
+      "\"date-destiny\" is predicated by \"TABLE.MOIRA_LIST_NAME = 'date-destiny'\"",
+
+      "\"vivid-prosper\" is predicated by \"TABLE.MOIRA_LIST_NAME = 'vivid-prosper'\"",
+      "\"iguana-iguana\" is predicated by \"TABLE.MOIRA_LIST_NAME = 'iguana-iguana'\"",
+      "\"quokka-umbrella\" is predicated by \"TABLE.MOIRA_LIST_NAME = 'quokka-umbrella'\"",
+      "\"iris-violet\" is predicated by \"TABLE.MOIRA_LIST_NAME = 'iris-violete'\"",
+      "\"nectarine-glimmer\" is predicated by \"TABLE.MOIRA_LIST_NAME = 'nectarine-glimmer'\"",
+
+
+
+      "\"mailing list about duo users\" is predicated by \"TABLE.MOIRA_LIST_NAME LIKE '%duo-users%'\"",
+      "\"LIST69.377-keeper-xenon\" is predicated by \"TABLE.MOIRA_LIST_OWNER_KEY = 'LIST69.377-keeper-xenon'\"",
+      "\"LIST23.905-candle-orange\" is predicated by \"TABLE.MOIRA_LIST_OWNER_KEY = LIST23.905-candle-orange'\"",
+      "\"LIST28.551-goose-dancer\" is predicated by \"TABLE.MOIRA_LIST_OWNER_KEY = 'LIST28.551-goose-dancer'\"",
+      "\"LIST32.090-lion-destiny\" is predicated by \"TABLE.MOIRA_LIST_OWNER_KEY = 'LIST32.090-lion-destiny'\"",
+      "\"LISTradiant-meadow\" is predicated by \"TABLE.MOIRA_LIST_OWNER_KEY = 'LISTradiant-meadow\"",
+      "\"LISTlegacy-kindness\" is predicated by \"TABLE.MOIRA_LIST_OWNER_KEY = 'LISTlegacy-kindness'\"",
+      "\"LISTecho-lemon\" is predicated by \"TABLE.MOIRA_LIST_OWNER_KEY = 'LISTecho-lemon'\"",
+      "\"LISTiris-kindness\" is predicated by \"TABLE.MOIRA_LIST_OWNER_KEY = 'LISTiris-kindness'\"",
+      "\"USERdate-raspberry\" is predicated by \"TABLE.MOIRA_LIST_OWNER_KEY = 'USERdate-raspberry'\"",
+      "\"LISTpanda-xerus\" is predicated by \"TABLE.MOIRA_LIST_OWNER_KEY = 'LISTpanda-xerus'\"",
+
+      "\"TABLE.IS_MOIRA_GROUP\" takes on the values \"Y\" and \"N\" for yes and no."
+    ],
+    "explanation": "This type of internal evidence explains how Moira mailing lists are identified, either by their exact name, a pattern in their name, or their owner key in the SQL."
+  },
+  {
+    "examples": [
+      "\"degree-granting\" is predicated by \"TABLE.IS_DEGREE_GRANTING = 'Y'\"",
+      "\"degree-granting courses\" is predicated by \"TABLE.IS_DEGREE_GRANTING = 'Y'\"",
+      "\"grant degrees\" is predicated by \"TABLE.IS_DEGREE_GRANTING = 'Y'\"",
+      "\"current status\" is predicated by \"TABLE.IS_CURRENT_TERM\"",
+      "\"current term status\" is predicated by \"TABLE.IS_CURRENT_TERM\"",
+      "\"current term\" is predicated by \"TABLE.IS_CURRENT_TERM = 'Y'\"",
+      "\"courses with materials\" is predicated by \"TIP_SUBJECT_OFFERED.IS_NO_COURSE_MATERIAL = 'N'\"",
+      "\"TABLE.COURSE_LEVEL\" take on the values \"U\" for undergraduate and \"G\" for graduate courses",
+      "\"TABLE.IS_PUBLIC\" takes on the values \"Y\" and \"N\" for yes and no."
+    ],
+    "explanation": "This type of internal evidence explains how academic attributes like term status, degree-granting status, and course material availability are represented in the SQL."
+  },
+  {
+    "examples": [
+      "\"faculty\" is predicated by \"TABLE.EMPLOYEE_TYPE = 'Faculty'\"",
+      "\"support staff\" is predicated by \"TABLE.EMPLOYEE_TYPE = 'Support Staff'\"",
+      "\"student\" is predicated by \"TABLE.EMPLOYEE_TYPE = 'Student'\"",
+      "\"service staff\" is predicated by \"TABLE.EMPLOYEE_TYPE = 'Service Staff'\"",
+      "\"medical staff\" is predicated by \"TABLE.EMPLOYEE_TYPE = 'Medical'\"",
+      "\"people belonging to some other academic group\" is predicated by \"TABLE.EMPLOYEE_TYPE = 'Other Academic Group'\"",
+      "\"sponsored research staff\" is predicated by \"TABLE.EMPLOYEE_TYPE = 'Sponsored Research Staff'\"",
+      "\"the activity leader\" is predicated by \"TABLE.PERSON_ROLE = 'Activity leader'\"",
+      "\"the session leader\" is predicated by \"TABLE.PERSON_ROLE = 'Session leader'\"",
+      "\"the person to contact\" is predicated by \"TABLE.PERSON_ROLE = 'Contact leader'\""
+    ],
+    "explanation": "This type of internal evidence explains how different types of personnel, such as faculty and staff, are categorized and filtered based on their employment type in the SQL."
+  },
+  {
+    "examples": [
+      "\"TABLE.SESSION_START_TIME\" is formatted as \"HHMMXX\" where \"HH\" is the 12 hour format, \"MM\" is the minutes, and \"XX\" is either \"AM\" or \"PM\"",
+      "\"SESSION_START_TIME\" and \"SESSION_END_TIME\" are formatted as \"%h%i%p\""
+    ],
+    "explanation": "This type of internal evidence explains how time is formatted in the SQL for certain tables."
+  },
+  {
+    "examples": [
+      "\"TABLE.DATE_OCCUPIED\" is formatted as \"%m/%d/%Y\"",
+      "\"TABLE.TERM_END_DATE\" is formatted as \"%d-%b-%y\"",
+      "\"TABLE.DATE_BUILT\" is formatted as \"%m/%d/%Y\"",
+      "\"TABLE.TERM_START_DATE\" is formatted as \"%d-%b-%y\"",
+      "\"TABLE.TERM_CODE\" is formatted as \"YYYYTT\" where \"YYYY\" is the year and \"TT\" is the term. Terms can be \"FA\", \"JA\", \"SP\", and \"SU\" for fall, IAP, spring, and summer"
+    ],
+    "explanation": "This type of internal evidence explains how dates are formatted in the SQL for certain tables."
+  },
+  
+  {
+    "examples": [
+      "\"equivalent subjects\" may contain multiple values separated by commas",
+      "There may be multiple authors separated by a semicolon in the \"TABLE.AUTHOR\""
+    ],
+    "explanation": "This type of internal evidence explains how certains column values are formatted for the table."
+  }
+]

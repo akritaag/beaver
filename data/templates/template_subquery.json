@@ -1,0 +1,123 @@
+[
+    {
+        "question": "For each order, give order priority, order date, order status, ship priority, total price, order key, clerk, and the maximum customer key for each order considering the current row and the next 2 rows ordered order key sequence?",
+        "sql": "SELECT t0.o_orderpriority, t0.o_orderdate, t0.o_orderstatus, t0.o_shippriority, t0.o_totalprice, t0.o_orderkey, t0.o_clerk, MAX(t0.o_custkey) OVER (ORDER BY t0.o_orderkey ROWS BETWEEN CURRENT ROW AND 2 FOLLOWING)"
+    },
+    {
+        "question": "For line items with order keys equal to 42003221, show comments, extended prices, line statuses, and assign row numbers within a window of 2 preceding and 1 following rows ordered by comment.",
+        "sql": "SELECT t0.l_comment, t0.l_extendedprice, t0.l_linestatus, ROW_NUMBER() OVER (ORDER BY t0.l_comment ROWS BETWEEN 2 PRECEDING AND 1 FOLLOWING) AS window_column FROM lineitem t0 WHERE t0.l_orderkey == 42003221.252678454"
+    },
+    {
+        "question": "List part supply cost, comments, available quantity, and part key along with dense ranks over supplier key ordered by supplier key.",
+        "sql": "SELECT t0.ps_supplycost, t0.ps_comment, t0.ps_availqty, t0.ps_partkey, DENSE_RANK() OVER (PARTITION BY t0.ps_suppkey ORDER BY t0.ps_suppkey) AS window_column FROM partsupp t0"
+    },
+    {
+        "question": "For line items with extended price equal to 74480.68, show part key, shipping instructions, extended price, line status, discournt, line number, return flag, supply key, commit date, and assign row numbers within each discount group ordered by part key.",
+        "sql": "SELECT t0.l_partkey, t0.l_shipinstruct, t0.l_extendedprice, t0.l_linestatus, t0.l_discount, t0.l_linenumber, t0.l_returnflag, t0.l_suppkey, t0.l_commitdate, ROW_NUMBER() OVER (PARTITION BY t0.l_discount ORDER BY t0.l_partkey) AS window_column FROM lineitem t0 WHERE t0.l_extendedprice == 74480.67891528388"
+    },
+    {
+        "question": "For line items with order keys equal to 594793825, show line number, return flag, discount, quantity, commit date, receipt date, order key, ship date, line status, ship modem part key, extended price, ship instructions, and minimum tax value over part key group ordered by part key.",
+        "sql": "SELECT t0.l_linenumber, t0.l_returnflag, t0.l_discount, t0.l_quantity, t0.l_commitdate, t0.l_receiptdate, t0.l_orderkey, t0.l_shipdate, t0.l_linestatus, t0.l_shipmode, t0.l_partkey, t0.l_extendedprice, t0.l_shipinstruct, t0.l_tax, min(t0.l_tax) OVER (PARTITION BY t0.l_partkey ORDER BY t0.l_partkey ) window_column FROM lineitem t0 WHERE t0.l_orderkey == 594793825.9131762"
+    },
+    {
+        "question": "For part supplies with part keys equal to 18786668, show comment, part key, supply cost, available quantity, supply key, and average part key within each part key group ordered by supply cost.",
+        "sql": "SELECT t0.ps_comment, t0.ps_partkey, t0.ps_supplycost, t0.ps_availqty, t0.ps_suppkey, AVG(t0.ps_partkey) OVER (PARTITION BY t0.ps_partkey ORDER BY t0.ps_supplycost) AS window_column FROM partsupp t0 WHERE t0.ps_partkey == 18786668.126731694"
+    },
+    {
+        "question": "For line items with order keys equal to 218462896, show part key, supplier key, return flag, and the running sum of part keys within each discount group ordered by part key.",
+        "sql": "SELECT t0.l_partkey, t0.l_suppkey, t0.l_returnflag, SUM(t0.l_partkey) OVER (PARTITION BY t0.l_discount ORDER BY t0.l_partkey) AS window_column FROM lineitem t0 WHERE t0.l_orderkey == 218462896.88587567"
+    },
+    {
+        "question": "For orders with total price equal to 506951.79, show order key, clerk, comment, shipping priority, and rank within each shipping priority group ordered by order key.",
+        "sql": "SELECT t0.o_orderkey, t0.o_clerk, t0.o_comment, t0.o_shippriority, RANK() OVER (PARTITION BY t0.o_shippriority ORDER BY t0.o_orderkey) window_column FROM orders t0 WHERE t0.o_totalprice == 506951.7928869038"
+    },
+    {
+        "question": "For orders with order keys equal to 517323962, show shipping priority, order date, clerk, order priority, comment, order status, and the minimum shipping priority in a window of 3 preceding and 1 following row ordered by customer key.",
+        "sql": "SELECT t0.o_shippriority, t0.o_orderdate, t0.o_clerk, t0.o_orderpriority, t0.o_comment, t0.o_orderstatus, MIN(t0.o_shippriority) OVER (ORDER BY t0.o_custkey ROWS BETWEEN 3 PRECEDING AND 1 FOLLOWING) AS window_column FROM orders t0 WHERE t0.o_orderkey == 517323962.16052765"
+    },
+    {
+        "question": "For line items with order keys equal to 338340941, show tax, shipping mode, part key, quantity, line status, return flag, and average quantity in a window of 2 preceding and 2 following rows grouped by discount ordered by tax.",
+        "sql": "SELECT t0.l_tax, t0.l_shipmode, t0.l_partkey, t0.l_quantity, t0.l_linestatus, t0.l_returnflag, AVG(t0.l_quantity) OVER (PARTITION BY t0.l_discount ORDER BY t0.l_tax ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING) AS window_column FROM lineitem t0 WHERE t0.l_orderkey == 338340941.0358643"
+    },
+    {
+        "question": "For orders with order keys equal to 555543212, show customer keys and their dense rank considering the current and 2 preceding rows ordered by shipping priority.",
+        "sql": "SELECT t0.o_custkey, dense_rank() OVER (ORDER BY t0.o_shippriority ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) window_column FROM orders t0 WHERE t0.o_orderkey == 555543212.4439847"
+    },
+      {
+        "question": "Count how many orders were placed in 2023 that were shipped via express delivery and had a total price over $500.",
+        "sql": "SELECT COUNT(*) AS express_high_value_orders FROM orders WHERE EXTRACT(YEAR FROM o_orderdate) = 2023 AND o_shippriority = 'EXPRESS' AND o_totalprice > 500;"
+      },
+      {"question":"Count top 10 customers by order volume","sql":"SELECT c_name, COUNT(o_orderkey) AS orders FROM customer JOIN orders ON c_custkey=o_custkey GROUP BY c_name ORDER BY orders DESC LIMIT 10;"},
+      {"question":"Find the customer name, highest value order, and order date for each customer in 2023 with a highest value order greater than 10000.",
+      "sql":"SELECT c.c_name, MAX(o.o_totalprice) AS max_order, o.o_orderdate FROM customer c JOIN orders o ON c.c_custkey = o.o_custkey WHERE EXTRACT(YEAR FROM o.o_orderdate) = 2023 GROUP BY c.c_name, o.o_orderdate HAVING MAX(o.o_totalprice) > 10000;"},
+      {"question":"For each product category give the product category name and calculate total spending for customers in premium or gold segments with a total extended price greater than 50000","sql":"SELECT p.p_category, SUM(l.l_extendedprice) AS total_spent FROM customer c JOIN orders o ON c.c_custkey = o.o_custkey JOIN lineitem l ON o.o_orderkey = l.l_orderkey JOIN product p ON l.l_productkey = p.p_productkey WHERE c.c_mktsegment IN ('PREMIUM','GOLD') GROUP BY p.p_category HAVING SUM(l.l_extendedprice) > 50000;"},
+      {
+        "question": "What are the minimum store number and average station number for each store, where store numbers are between 24.71 and 37.04 or station numbers are at least 4.89, and station numbers are between 14.52 and 18.1?",
+        "sql": "SELECT min(t0.'store_nbr'), avg(t0.'station_nbr') FROM walmart.'key' t0, walmart.'station' t1 WHERE t0.'station_nbr' = t1.'station_nbr' AND ((t0.'store_nbr' BETWEEN 24.706459294672058 AND 37.03583051105373) OR (t0.'station_nbr' >= 4.894832280336945)) AND ((t1.'station_nbr' >= 2.9000000000000004) OR (t1.'station_nbr' BETWEEN 7.098926558266483 AND 14.08392300356031)) AND t1.'station_nbr' BETWEEN 14.520878040316472 AND 18.1 GROUP BY t0.'store_nbr';"
+      },{
+        "question": "Give give the customer key, customer name, customer phone, the number of orders and the total quantity ordered for each customer who placed orders over $1,000 in 2023",
+        "sql": "SELECT c.c_custkey, c.c_name, c.c_phone, COUNT(o.o_orderkey) AS order_count, SUM(l.l_quantity) AS total_quantity FROM customer c JOIN orders o ON c.c_custkey = o.o_custkey JOIN lineitem l ON o.o_orderkey = l.l_orderkey WHERE o.o_totalprice > 1000 AND EXTRACT(YEAR FROM o.o_orderdate) = 2023 GROUP BY c.c_custkey, c.c_name, c.c_phone;"
+      },{
+        "question": "For each product category and department where the supplier has more than 5 items in stock, give the number of products and minimum price.",
+        "sql": "SELECT p.p_category, p.p_department, COUNT(p.p_productkey) AS product_count, MIN(p.p_retailprice) AS min_price FROM product p JOIN inventory i ON p.p_productkey = i.i_productkey JOIN supplier s ON i.i_suppkey = s.s_suppkey WHERE i.i_quantity > 5 GROUP BY p.p_category, p.p_department;"
+      },      
+{
+    "question": "Find the minimum available quantity and sum of supply costs from partsupp with medium part type",
+    "sql": "SELECT MIN(ps.ps_availqty) AS min_available, SUM(ps.ps_supplycost) AS total_cost FROM partsupp ps JOIN part p ON ps.ps_partkey = p.p_partkey WHERE p.p_type LIKE 'MEDIUM%';"
+  },{
+    "question": "Find the minimum order date and the corresponding customer name for orders with status 'F'",
+    "sql": "SELECT MIN(o.o_orderdate) AS min_order_date, c.c_name AS customer_name FROM orders o JOIN customer c ON o.o_custkey = c.c_custkey WHERE o.o_orderstatus = 'F';"
+  },
+  {
+    "question": "For each supplier give the supplier key and total cost given the supplier has a total supply cost that is more than one standard deviation above the mean.",
+    "sql": "SELECT ps_suppkey, SUM(ps_supplycost) AS total_cost FROM partsupp GROUP BY ps_suppkey HAVING SUM(ps_supplycost) > (SELECT AVG(ps_supplycost) + STDDEV(ps_supplycost) FROM partsupp);"
+  },
+  {
+    "question": "Find the top 3 most frequently ordered parts and give their part key and part name.",
+    "sql": "SELECT p_partkey, p_name FROM part WHERE p_partkey IN (SELECT l_partkey FROM lineitem GROUP BY l_partkey ORDER BY COUNT(*) DESC LIMIT 3);"
+  },
+  {
+    "question": "For each market segment give the name and the variance of the total price.",
+    "sql": "SELECT c_mktsegment, VARIANCE(o_totalprice) AS price_variance FROM customer JOIN orders ON c_custkey = o_custkey GROUP BY c_mktsegment ORDER BY price_variance DESC;"
+  },
+  {
+    "question": "For each supplier, give the name and the standard deviation of part supply costs.",
+    "sql": "SELECT s_name, STDDEV(ps_supplycost) AS cost_stddev FROM supplier JOIN partsupp ON s_suppkey = ps_suppkey GROUP BY s_name HAVING COUNT(*) > 5 ORDER BY cost_stddev DESC;"
+  },
+  {
+    "question": "For each order priority give the order priority name and give both variance and standard deviation of line item quantities by order priority.",
+    "sql": "SELECT o_orderpriority, VARIANCE(l_quantity) AS quantity_variance, STDDEV(l_quantity) AS quantity_stddev FROM orders JOIN lineitem ON o_orderkey = l_orderkey GROUP BY o_orderpriority ORDER BY quantity_variance DESC;"
+  },
+  {
+    "question": "For each nation give the nation name and calculate the average and variance of order total prices.",
+    "sql": "SELECT n_name, AVG(o_totalprice) AS avg_price, VARIANCE(o_totalprice) AS price_variance FROM nation JOIN customer ON n_nationkey = c_nationkey JOIN orders ON c_custkey = o_custkey GROUP BY n_name ORDER BY price_variance DESC;"
+  },
+  {
+    "question": "For each region give the region name and find the average and standard deviation of shipment times.",
+    "sql": "SELECT r_name, AVG(l_shipdate - o_orderdate) AS avg_ship_time, STDDEV(l_shipdate - o_orderdate) AS ship_time_stddev FROM region JOIN nation ON r_regionkey = n_regionkey JOIN customer ON n_nationkey = c_nationkey JOIN orders ON c_custkey = o_custkey JOIN lineitem ON o_orderkey = l_orderkey GROUP BY r_name ORDER BY ship_time_stddev DESC;"
+  },
+  {
+    "question": "For each product type give the average, variance, and standard deviation of part sizes by part type.",
+    "sql": "SELECT p_type, AVG(p_size) AS avg_size, VARIANCE(p_size) AS size_variance, STDDEV(p_size) AS size_stddev FROM part GROUP BY p_type ORDER BY size_variance DESC;"
+  },
+  {
+    "question": "For each nation give the nation's name and calculate the range and variance of supplier account balances.",
+    "sql": "SELECT n_name, MAX(s_acctbal) - MIN(s_acctbal) AS balance_range, VARIANCE(s_acctbal) AS balance_variance FROM supplier JOIN nation ON s_nationkey = n_nationkey GROUP BY n_name ORDER BY balance_range DESC;"
+  },
+  {
+    "question": "For each customer give the customer name and give the range, variance, and standard deviation of order line counts per customer.",
+    "sql": "SELECT c_name, MAX(order_line_count) - MIN(order_line_count) AS line_count_range, VARIANCE(order_line_count) AS line_count_variance, STDDEV(order_line_count) AS line_count_stddev FROM customer JOIN (SELECT o_custkey, COUNT(*) AS order_line_count FROM orders JOIN lineitem ON o_orderkey = l_orderkey GROUP BY o_custkey, o_orderkey) AS order_stats ON c_custkey = o_custkey GROUP BY c_name ORDER BY line_count_range DESC;"
+  },
+  {
+    "question": "For each order priority give the order priority name and calculate average, range, and variance of discount percentages.",
+    "sql": "SELECT o_orderpriority, AVG(l_discount) AS avg_discount, MAX(l_discount) - MIN(l_discount) AS discount_range, VARIANCE(l_discount) AS discount_variance FROM orders JOIN lineitem ON o_orderkey = l_orderkey GROUP BY o_orderpriority ORDER BY discount_range DESC;"
+  },
+  {
+    "question": "For each product type, give the product type name, and geometric mean of order quantities by part type where the quantity greater than zero.",
+    "sql": "SELECT p_type, EXP(AVG(LN(l_quantity))) AS geometric_mean FROM lineitem JOIN part ON l_partkey = p_partkey WHERE l_quantity > 0 GROUP BY p_type ORDER BY geometric_mean DESC;"
+  },
+  {
+    "question": "For each region give the region name and the coefficient of variation of shipping times.",
+    "sql": "SELECT r_name, STDDEV(l_shipdate - o_orderdate)/NULLIF(AVG(l_shipdate - o_orderdate),0) AS coefficient_of_variation FROM region JOIN nation ON r_regionkey = n_regionkey JOIN customer ON n_nationkey = c_nationkey JOIN orders ON c_custkey = o_custkey JOIN lineitem ON o_orderkey = l_orderkey GROUP BY r_name HAVING AVG(l_shipdate - o_orderdate) > 0 ORDER BY coefficient_of_variation DESC;"
+  }
+]

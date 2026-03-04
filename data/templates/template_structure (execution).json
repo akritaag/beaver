@@ -1,0 +1,18 @@
+{
+  "chain": {
+    "structure": "WITH inner_cte AS (\n SELECT ...\n FROM ...\n WHERE ...\n)\n...",
+    "subquery_decomposition": "You will be given one subquery. This one subquery is inner_cte."
+  },
+  "tree": {
+    "structure": "WITH subq1 AS (\n SELECT ...\n FROM ...\n WHERE ...\n),\nsubq2 AS (\n SELECT ...\n FROM ...\n WHERE ...\n)\n...",
+    "subquery_decomposition": "You will be given two subqueries. The first subquery is subq1. The second subquery is subq2."
+  },
+  "chain_tree": {
+    "structure": "WITH subq1 AS (\n WITH inner_cte1 AS (\n SELECT ...\n FROM ...\n WHERE ...\n)\n....\n),\nsubq2 AS (\nWITH inner_cte2 AS (\n SELECT ...\n FROM ...\n WHERE ...\n)\n...\n)\n...",
+    "subquery_decomposition": "You will be given four subqueries. The first subquery corresponds to inner_cte1. The second subquery corresponds to inner_cte2. The third subquery correspond to subq1. The fourth subquery corresponds to subq2."
+  },
+  "tree_chain": {
+    "structure": "WITH outer_cte AS (\n WITH subq1 AS (\n SELECT ...\n FROM ...\n WHERE ...\n ),\n subq2 AS (\n SELECT ...\n FROM ...\n WHERE ...\n )\n ...\n)\n...",
+    "subquery_decomposition": "You will be given three subqueries. The first subquery you are given is subq1. The second subquery you are given is subq2. You need to combine subq1 and subq2 to solve the third subquery which forms outer_cte."
+  }
+}
