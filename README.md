@@ -1,134 +1,93 @@
-# Beaver Evaluation Pipeline
+# 🦫 BEAVER: An Enterprise Benchmark for Text-to-SQL
 
-This repository contains the evaluation baselines and datasets for the **Beaver** text-to-SQL benchmark. It includes four different baseline methodologies for SQL generation and evaluation: **ReFoRCE**, **DAIL-SQL**, **DIN-SQL**, and **Few-shot**.
+This repository contains the datasets and evaluation for the **Beaver** text-to-SQL benchmark. It includes four text-to-SQL methods for evaluation: **ReFoRCE**, **DAIL-SQL**, **DIN-SQL**, and **Few-shot**.
 
 ## Repository Structure
 
 ```
-├── data/                       # Contains the dataset files (e.g. metadata, questions, tables)
-│   ├── templates/              # Internal and specific templates
-│   ├── dw/                     # `dw` database
-│   ├── neutron/                # `csail_stata_nova` database
-│   │   ├── dev.json            # Main questions file
-│   │   ├── dev_tables.json     # Tables metadata for the split
-│   │   ├── reranked_preds.json # Optional reranked table predictions
-│   │   ├── example.json        # Few-shot examples
-│   │   └── sample.py           # Script to generate a sampled split
-│   ├── nova/                   # `csail_stata_nova` database
-│   └── sp/                     # `sp` database
-│
-├── eval/                       # Evaluation baselines and scripts
-│   ├── ReFoRCE/                # ReFoRCE evaluation pipeline
-│   ├── dailsql/                # DAIL-SQL evaluation pipeline
-│   ├── dinsql/                 # DIN-SQL evaluation pipeline
-│   ├── Few-shot/               # Few-shot evaluation pipeline
-│   ├── evaluate_decomposition.py # Script for LLM-as-a-judge decomposition evaluation
-│   ├── evaluate_extraction.py  # Script for LLM-as-a-judge extraction evaluation
-│   ├── .env                    # Credentials file (API keys + MySQL password)
+├── data/                                # Dataset files (e.g. metadata, questions, tables)
+│   ├── dw/                              # `dw` database
+│   │   ├── dev.json                     # Question file
+│   │   ├── dev_tables.json              # Tables metadata
+│   │   ├── top_tables.json              # Top-k tables for generation
+│   │   └── example.json                 # Few-shot examples
+│   └── ...                              # Other databases
+└── eval/                                # Evaluation baselines and scripts
+    ├── .env                             # Credential file (API keys + MySQL password)
+    ├── reforce/                         # ReFoRCE evaluation pipeline
+    ├── fewshot/                         # Few-shot evaluation pipeline
+    ├── dailsql/                         # DAIL-SQL evaluation pipeline
+    ├── dinsql/                          # DIN-SQL evaluation pipeline
+    ├── evaluate_decomposition.py        # Script for evaluating query decomposition subtask
+    └── evaluate_extraction.py           # Script for evaluating other subtasks
 ```
-
----
 
 ## Data Preparation
 
-For each database (e.g., `dw`, `neutron`, `nova`, `sp`), you will need to download the necessary data files into their respective folders.
-
-Ensure the following files are present in the dataset split folder (e.g., `data/neutron/`):
+For each database (e.g., `dw`), you will need to download the necessary data files from [here](https://drive.google.com/drive/folders/1xV4Wxk_AuE8gx-Q678mas7zChrAQliof?usp=sharing) into their respective folders (e.g., `data/dw/`).
+Ensure the following files are present:
 - `dev.json`: The main dataset questions file.
 - `dev_tables.json`: The tables and schema metadata.
-- `reranked_preds.json`: The table retrieval rankings.
+- `top_tables.json`: The table retrieval rankings.
 - `example.json`: Few-shot examples.
-- `sample.py`: A utility script.
 
-*(Optional)*: If you want to run evaluations on a smaller, sampled subset, you can execute the `sample.py` script to generate a sampled split for that dataset:
-```bash
-cd data/neutron
-python sample.py
+You also need to setup the MySQL databases by importing the dump files which can be downloaded from [here](https://drive.google.com/drive/folders/19bRoRxgWQLcJN3LTxwgev0xTahunjPIR?usp=drive_link). A free MySQL installation can be found [here](https://dev.mysql.com/downloads/mysql/). After the installation, import the MySQL dump files using
+
+```
+mysql -u root -p < `xxx.sql`
 ```
 
----
+<!-- - `sample.py`: A utility script. -->
+
+<!-- *(Optional)*: If you want to run evaluations on a smaller, sampled subset, you can execute the `sample.py` script to generate a sampled split for that dataset: -->
+<!-- ```bash
+cd data/neutron
+python sample.py
+``` -->
 
 ## Environment Setup
 
-Each baseline has its own dependencies and environment requirements. You can manage these environments using either `conda` (recommended) or `venv` (as an alternative).
-
-<!-- ### Building with `venv` (Alternative to `conda`)
-If you prefer not to use `conda`, you can create a standard Python virtual environment inside each baseline folder (Note: Python versions may vary per baseline; please ensure your base python matches the version mentioned in the `conda` sections):
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-``` -->
-
-### Credentials (`.env` file)
+**Credentials (`.env` file)**
 
 All API keys and MySQL credentials are managed through a single `eval/.env` file.
 
 The `.env` file should contain:
 ```
 # LLM API Keys
-OPENAI_API_KEY=sk-proj-...
-OPENROUTER_API_KEY=sk-...
-GOOGLE_API_KEY=...
+OPENAI_API_KEY=xxx
+OPENROUTER_API_KEY=xxx
+GOOGLE_API_KEY=xxx
 
 # MySQL Credentials (shared across all databases)
 MYSQL_HOST=localhost
 MYSQL_USER=root
-MYSQL_PASSWORD=your_password
+MYSQL_PASSWORD=xxx
 ```
 
-The database name is automatically determined from the `--dataset` argument — no need to create separate credential files per database.
+**Text-to-SQL methods**
 
-### How to build the database in MySQL
+Each method has its own dependencies and environment requirements. You can manage these environments using either `conda` or `venv`.
 
-Download the database dump file from **TODO** and import it into MySQL.
+1. ReFoRCE (adapted from [this official ReFoRCE implementation](https://github.com/Snowflake-Labs/ReFoRCE/tree/o3/methods/ReFoRCE))
 
----
-
-## Baseline Methods
-
-We provide automated evaluation pipelines for three different text-to-SQL generation methods. In the paper, we define five subtasks: multi-table retrieval, join key detection, column mapping, domain knowledge extraction, and query decomposition. We also provide the annotations for these subtasks. We provide three settings of providing these annotations as oracle hints.
-
-### Settings of subtask annotations
-All baselines use a unified `run.sh` script with named arguments:
-
-```bash
-./run.sh --model <model> --dataset <dataset> --setting <0|1|2>
-```
-
-- **Setting 0**: Standard end-to-end setting with no hints. Base information with only the top-k tables provided. *(Recommended Baseline)*
-- **Setting 1**: With hints for schema-linking subtasks. Includes gold tables + column mapping + join keys.
-- **Setting 2**: With hints for all subtasks. Includes setting 1 + domain knowledge + subqueries.
-
-### 1. ReFoRCE
-Adpoted from [this official ReFoRCE implementation](https://github.com/Snowflake-Labs/ReFoRCE/tree/o3/methods/ReFoRCE).
-
-**Setup:**
+setup using `conda`:
 ```bash
 conda create -n reforce python=3.10 -y
 conda activate reforce
-cd eval/ReFoRCE
+cd eval/reforce
 pip install -r requirements.txt
 ```
-or you can use venv:
+setup using `venv`:
 ```bash
-cd eval/ReFoRCE
+cd eval/reforce
 python3 -m venv reforce
 source reforce/bin/activate
 pip install -r requirements.txt
 ```
 
-**Execution Example:**
-```bash
-cd eval/ReFoRCE
-./run.sh --model gpt-5-mini --dataset dw --setting 0
-```
+2. DAIL-SQL (adapted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dailsql))
 
-### 2. DAIL-SQL
-Adpoted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dailsql).
-
-**Setup:**
+setup using `conda`:
 ```bash
 conda create -n dailsql python=3.9 -y
 conda activate dailsql
@@ -137,7 +96,7 @@ pip install -r requirements.txt
 python nltk_downloader.py
 pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
 ```
-or you can use venv:
+setup using `venv`:
 ```bash
 cd eval/dailsql
 python3 -m venv dailsql
@@ -147,23 +106,16 @@ python nltk_downloader.py
 pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
 ```
 
-**Execution Example:**
-```bash
-cd eval/dailsql
-./run.sh --model gpt-5.2 --dataset neutron --setting 2
-```
+3. DIN-SQL (adapted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dinsql))
 
-### 3. DIN-SQL
-Adpoted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dinsql).
-
-**Setup:**
+setup using `conda`:
 ```bash
 conda create -n dinsql python=3.13 -y
 conda activate dinsql
 cd eval/dinsql
 pip install -r requirements.txt
 ```
-or you can use venv:
+setup using `venv`:
 ```bash
 cd eval/dinsql
 python3 -m venv dinsql
@@ -171,64 +123,69 @@ source dinsql/bin/activate
 pip install -r requirements.txt
 ```
 
-**Execution Example:**
-```bash
-cd eval/dinsql
-./run.sh --model gpt-4 --dataset nova --setting 1
-```
-
-### 4. Few-shot
-The Few-shot baseline provides a standard prompt-based evaluation.
-
-**Setup:**
+4. Few-shot
+<!-- The Few-shot baseline provides a standard prompt-based evaluation. -->
+setup using `conda`:
 ```bash
 conda create -n fewshot python=3.10 -y
 conda activate fewshot
-cd eval/Few-shot
+cd eval/few-shot
 pip install -r requirements.txt
 ```
-or you can use venv:
+setup using `venv`:
 ```bash
-cd eval/Few-shot
+cd eval/few-shot
 python3 -m venv fewshot
 source fewshot/bin/activate
 pip install -r requirements.txt
 ```
 
-**Execution Example:**
+<!-- The database name is automatically determined from the `--dataset` argument — no need to create separate credential files per database. -->
+
+
+## Execution accuracy evaluation
+
+<!-- In the paper, we define five subtasks: multi-table retrieval, join key detection, column mapping, domain knowledge extraction, and query decomposition. We also provide annotations for these subtasks. We provide three settings of providing these annotations as oracle hints. -->
+
+<!-- ### Settings of subtask annotations -->
+All baselines can be executed using the `run.sh` script in their respective folders with named arguments:
+
+For example, to execute ReFoRCE,
 ```bash
-cd eval/Few-shot
-./run.sh --model gpt-5-mini --dataset neutron --setting 2
+cd eval/reforce
+./run.sh --model <model> --dataset <dataset> --setting <0|1|2>
 ```
 
----
+- **Setting 0** *(Standard baseline)*: Standard end-to-end setting with no hints. Base information with only the top-k tables provided.
+- **Setting 1**: With hints for schema-linking subtasks. Includes gold tables, column mapping, and join keys.
+- **Setting 2**: With hints for all subtasks. Includes **Setting 1**, domain knowledge, and subqueries.
 
-## Advanced Evaluation (LLM-as-a-Judge)
+For details on subtasks, please refer to the paper.
 
-Beyond standard execution accuracy (Exact Match), the repository includes advanced evaluation scripts located in the `eval/` root directory to analyze the reasoning capabilities of the generated SQLs.
+## Subtask evaluation
 
-These scripts analyze the outputs generated by the baselines.
+Beyond standard execution accuracy (exact match), we also provide fine-grained evaluation on the subtasks. These scripts analyze the outputs generated by the methods above, so you need to first execute `run.sh` before you can obtain the subtask performance.
 
-### Query Decomposition
+**Query decomposition subtask**
 Evaluates if the generated SQL semantically reflects the intended query decomposition steps.
 ```bash
 cd eval/
 python evaluate_decomposition.py \
-  --input_dir ReFoRCE/output/gpt-5-mini-beaver-dw-opt1-log-*/ \
-  --gold_file ../data/dw/dev_sampled.json \
+  --input_dir reforce/output/gpt-5-mini-beaver-dw-opt1-log-*/ \
+  --gold_file ../data/dw/dev.json \
   --model gpt-5-mini \
   --num_workers 40
 ```
-*(Outputs `summary.json` containing the average decomposition scores)*
+*(Outputs `summary.json` containing the average LLM-as-a-judge decomposition scores)*
 
-### Extraction
-Evaluates how well the model extracts correct database concepts (tables, columns, join keys, and domain knowledge).
+**Other subtasks**
+Evaluates the performance on table retrieval, join key detection, column mapping, and domain knowledge extraction.
 ```bash
 cd eval/
 python evaluate_extraction.py \
-  --input_dir ReFoRCE/output/gpt-5-mini-beaver-dw-opt1-log-*/ \
-  --gold_file ../data/dw/dev_sampled.json \
+  --input_dir reforce/output/gpt-5-mini-beaver-dw-opt1-log-*/ \
+  --gold_file ../data/dw/dev.json \
   --model gpt-5-mini \
   --num_workers 40
 ```
-*(Outputs `summary.json` with F1 scores for the extractions)*
+*(Outputs `summary.json` with F1 scores for these tasks)*
