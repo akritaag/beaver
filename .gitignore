@@ -185,4 +185,6 @@ eval/dailsql/output
 
 eval/fewshot/output
 
+eval/output/
+
 .vscode/
