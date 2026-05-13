@@ -14,7 +14,7 @@ This repository contains the datasets and evaluation for the **Beaver** text-to-
 │   └── ...                              # Other databases
 └── eval/                                # Evaluation baselines and scripts
     ├── .env                             # Credential file (API keys + MySQL password)
-    ├── reforce/                         # ReFoRCE evaluation pipeline
+    ├── ReFoRCE/                         # ReFoRCE evaluation pipeline
     ├── fewshot/                         # Few-shot evaluation pipeline
     ├── dailsql/                         # DAIL-SQL evaluation pipeline
     ├── dinsql/                          # DIN-SQL evaluation pipeline
@@ -74,12 +74,12 @@ setup using `conda`:
 ```bash
 conda create -n reforce python=3.10 -y
 conda activate reforce
-cd eval/reforce
+cd eval/ReFoRCE
 pip install -r requirements.txt
 ```
 setup using `venv`:
 ```bash
-cd eval/reforce
+cd eval/ReFoRCE
 python3 -m venv reforce
 source reforce/bin/activate
 pip install -r requirements.txt
@@ -152,7 +152,7 @@ All baselines can be executed using the `run.sh` script in their respective fold
 
 For example, to execute ReFoRCE,
 ```bash
-cd eval/reforce
+cd eval/ReFoRCE
 ./run.sh --model <model> --dataset <dataset> --setting <0|1|2>
 ```
 
@@ -171,9 +171,10 @@ Evaluates if the generated SQL semantically reflects the intended query decompos
 ```bash
 cd eval/
 python evaluate_decomposition.py \
-  --input_dir reforce/output/gpt-5-mini-beaver-dw-opt1-log-*/ \
+  --input_dir ReFoRCE/output/gpt-5-mini-beaver-dw-setting0-log-*/ \
   --gold_file ../data/dw/dev.json \
   --model gpt-5-mini \
+  --baseline_method reforce \
   --num_workers 40
 ```
 *(Outputs `summary.json` containing the average LLM-as-a-judge decomposition scores)*
@@ -183,9 +184,10 @@ Evaluates the performance on table retrieval, join key detection, column mapping
 ```bash
 cd eval/
 python evaluate_extraction.py \
-  --input_dir reforce/output/gpt-5-mini-beaver-dw-opt1-log-*/ \
+  --input_dir ReFoRCE/output/gpt-5-mini-beaver-dw-setting0-log-*/ \
   --gold_file ../data/dw/dev.json \
   --model gpt-5-mini \
+  --baseline_method reforce \
   --num_workers 40
 ```
 *(Outputs `summary.json` with F1 scores for these tasks)*

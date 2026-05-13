@@ -183,6 +183,6 @@ eval/dailsql/postprocessed_data/*/
 eval/dailsql/preprocessed_data/*/
 eval/dailsql/output
 
-eval/Few-shot/output
+eval/fewshot/output
 
 .vscode/
