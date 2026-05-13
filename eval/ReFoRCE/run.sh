@@ -175,7 +175,15 @@ python evaluate_beaver.py \
 
 echo ""
 echo "========================================"
-echo "ReFoRCE Beaver ${DATASET} Setting ${SETTING} - Complete!"
+echo "ReFoRCE Beaver ${DATASET} Setting ${SETTING} - Generation Complete!"
 echo "========================================"
 echo "Results saved to: $OUTPUT_PATH"
 echo "Gold results saved to: $GOLD_RESULT_PATH"
+
+echo ""
+echo "Step 5: Unifying generated SQLs..."
+echo "========================================"
+python unify.py \
+    --input_dir $OUTPUT_PATH \
+    --gold_file $DATA_FILE \
+    --dataset $DATASET

@@ -94,20 +94,15 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Step 3: Evaluate results
+# Step 3: Unify results
 echo ""
-echo "[Step 3/3] Evaluating results with ReFoRCE comparison logic..."
+echo "[Step 3/3] Unifying generated SQLs..."
 echo "------------------------------------------------------------------------"
 
-DEV_FILE="preprocessed_data/${DEV}/${DEV}_preprocessed.json"
-TABLES_FILE=${BEAVER_TABLES}
-
-python3 evaluate_beaver_reforce.py \
-    --dev ${DEV} \
-    --dev_file ${DEV_FILE} \
-    --tables_file ${TABLES_FILE} \
-    --output_dir "output/${MODEL}-beaver-${DATASET}-setting${SETTING}" \
-    --db_id ${DATASET}
+python3 unify.py \
+    --input_dir "output/${MODEL}-beaver-${DATASET}-setting${SETTING}" \
+    --gold_file "../../data/${DATASET}/dev_sampled.json" \
+    --dataset ${DATASET}
 
 echo ""
 echo "========================================================================"

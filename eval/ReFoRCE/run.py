@@ -222,7 +222,7 @@ def process_sql_data(sql_data):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--task', type=str, default="snow", choices=["snow", "lite", "BIRD", "spider", "beaver"],)
+    parser.add_argument('--task', type=str, default="beaver", choices=["snow", "lite", "BIRD", "spider", "beaver"],)
     parser.add_argument('--subtask', type=str, default=None, choices=["sqlite"])
     parser.add_argument('--db_path', type=str, default=None)
     parser.add_argument('--output_path', type=str, default="output/o3-snow-log")
@@ -256,7 +256,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=16)
 
     parser.add_argument('--omnisql_format_pth', type=str, default=None)
-    parser.add_argument('--gold_result_path', type=str, default="../../data/BIRD/gold_result")
+    parser.add_argument('--gold_result_path', type=str, default="../../data/gold_result")
     args = parser.parse_args()
     prompt_all = Prompts()
 

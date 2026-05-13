@@ -160,6 +160,16 @@ cd eval/ReFoRCE
 - **Setting 1**: With hints for schema-linking subtasks. Includes gold tables, column mapping, and join keys.
 - **Setting 2**: With hints for all subtasks. Includes **Setting 1**, domain knowledge, and subqueries.
 
+### Unified Evaluation Structure
+After generating the SQL predictions, the `run.sh` scripts will automatically execute a `unify.py` script. This executes both the predicted SQL and the gold SQL against the MySQL database and saves the outputs as CSV files inside `eval/output/unified/<baseline>/<run_name>/`. 
+
+To obtain the final evaluation metrics (exact set match over the CSVs), you must run the `unified_evaluation.py` script on the unified directory:
+```bash
+cd eval
+python unified_evaluation.py --unified_dir output/unified/<baseline>/<run_name>
+```
+*(Outputs `evaluation_summary.json` containing the execution accuracy and detailed question-level results)*
+
 For details on subtasks, please refer to the paper.
 
 ## Subtask evaluation

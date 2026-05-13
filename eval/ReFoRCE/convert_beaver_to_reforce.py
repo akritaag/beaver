@@ -241,7 +241,7 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
     # Load templates if preprocessing option is 3
     templates = []
     if preprocessing_option == 3:
-        templates_path = "../../data/templates/template_structure (execution).json"
+        templates_path = "../../data/template_structure.json"
         print(f"Loading templates from: {templates_path}")
         with open(templates_path, 'r') as f:
             templates = json.load(f)

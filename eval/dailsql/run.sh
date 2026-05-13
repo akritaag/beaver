@@ -97,17 +97,13 @@ python postprocessed_data/beaver_postprocess.py \
     --dev ${DEV} \
     --tables_file ${TABLES_FILE}
 
-# Step 5: Evaluate results
+# Step 5: Unify results
 echo ""
-echo "Step 5: Evaluating results with ReFoRCE comparison logic..."
-python evaluate_beaver_reforce.py \
-    --option ${OPTION} \
-    --model ${MODEL} \
-    --comment ${COMMENT} \
-    --dev_file ${DEV_FILE} \
-    --dev ${DEV} \
-    --tables_file ${TABLES_FILE} \
-    --db_id ${DATASET}
+echo "Step 5: Unifying generated SQLs..."
+python unify.py \
+    --input_dir postprocessed_data/${COMMENT}_${DEV}_CTX-200/RESULTS_MODEL-${MODEL}-SQL \
+    --gold_file ../../data/${DATASET}/dev_sampled.json \
+    --dataset ${DATASET}
 
 echo ""
 echo "========================================"

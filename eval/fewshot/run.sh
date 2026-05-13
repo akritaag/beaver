@@ -74,17 +74,16 @@ python parallel_execute.py \
     $HINTS
 
 echo ""
-echo "Step 2: Evaluating Predictions"
+echo ""
+echo "Step 2: Unify Predictions"
 echo "=============================="
 GOLD_FILE="${DATA_DIR}/${DATASET}/dev_sampled.json"
-TABLES_FILE="${DATA_DIR}/${DATASET}/dev_tables.json"
 
-python eval.py \
-    --output_dir "$OUTPUT_DIR" \
-    --gold "$GOLD_FILE" \
-    --dataset "$DATASET" \
-    --tables "$TABLES_FILE"
+python unify.py \
+    --input_dir "$OUTPUT_DIR" \
+    --gold_file "$GOLD_FILE" \
+    --dataset "$DATASET"
 
 echo "========================================"
-echo "Few-Shot Evaluation Complete!"
+echo "Few-Shot Generation Complete!"
 echo "Results saved to: $OUTPUT_DIR"
