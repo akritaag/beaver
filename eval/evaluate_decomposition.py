@@ -193,7 +193,7 @@ def main():
     parser.add_argument("--input_dir", type=str, default="postprocessed_data/beaver_sp_opt2_beaver_sp_opt2_CTX-200/RESULTS_MODEL-anthropic/claude-sonnet-4.5-SQL")
     parser.add_argument("--gold_file", type=str, default="../../data/sp/dev_sampled.json")
     parser.add_argument("--model", type=str, default="gpt-5-mini", help="LLM model to use")
-    parser.add_argument("--baseline_method", type=str, choices=["reforce", "dinsql", "dailsql"], default="reforce", help="Baseline method (controls output path structure)")
+    parser.add_argument("--baseline_method", type=str, choices=["reforce", "dinsql", "dailsql", "fewshot"], default="reforce", help="Baseline method (controls output path structure)")
     parser.add_argument("--num_workers", type=int, default=40, help="Number of parallel workers")
     parser.add_argument("--output_dir", type=str, default=None, help="Output directory") 
     
@@ -208,9 +208,10 @@ def main():
     
     print(f"Found {len(subdirs)} subdirectories to evaluate.")
 
+    args.input_dir = args.input_dir.rstrip('/')
     if args.output_dir is None:
         if args.baseline_method == "reforce":
-            args.output_dir = os.path.join('Reforce/output/judge', args.input_dir.split('/')[-1])
+            args.output_dir = os.path.join('ReFoRCE/output/judge', args.input_dir.split('/')[-1])
         elif args.baseline_method == "dinsql":
             if 'qwen' in args.input_dir or 'minimax' in args.input_dir or 'claude' in args.input_dir:
                 args.output_dir = os.path.join('dinsql/output/judge', '/'.join(args.input_dir.split('/')[-2:]))
@@ -221,6 +222,8 @@ def main():
                 args.output_dir = os.path.join('dailsql/output/judge', '/'.join(args.input_dir.split('/')[-3:]))
             else:
                 args.output_dir = os.path.join('dailsql/output/judge', '/'.join(args.input_dir.split('/')[-2:]))
+        elif args.baseline_method == "fewshot":
+            args.output_dir = os.path.join('fewshot/output/judge', args.input_dir.split('/')[-1])
     
     os.makedirs(args.output_dir, exist_ok=True)
     

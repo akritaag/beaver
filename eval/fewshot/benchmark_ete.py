@@ -85,7 +85,7 @@ STRUCTURE_MAPPING = {
 }
 
 def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: str = "../../data"):
-    structures = read_json(f"{data_dir}/templates/template_structure (execution).json")
+    structures = read_json(f"{data_dir}/template_structure.json")
     qs = read_json(f"{data_dir}/{dataset}/{q_fn}.json")
     example = read_json(f"{data_dir}/{dataset}/example.json")
     dev_tables = read_json(f"{data_dir}/{dataset}/dev_tables.json")

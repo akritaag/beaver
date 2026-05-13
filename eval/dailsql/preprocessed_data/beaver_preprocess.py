@@ -545,7 +545,7 @@ if __name__ == '__main__':
     
     templates = None
     if args.option == 3:
-        templates_path = osp.join(beaver_base_dir, 'templates', 'template_structure (execution).json')
+        templates_path = osp.join(beaver_base_dir, 'template_structure.json')
         print(f"Loading templates from: {templates_path}")
         with open(templates_path, 'r') as f:
             templates = json.load(f)

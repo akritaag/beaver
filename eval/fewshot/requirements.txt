@@ -7,3 +7,5 @@ mysql-connector-python
 tiger_utils
 sql_metadata
 numpy
+tabulate
+torch
