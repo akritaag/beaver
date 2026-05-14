@@ -9,7 +9,7 @@ class BasicExampleSelector(object):
     def __init__(self, data, *args, **kwargs): 
         self.data = data
         self.train_json = self.data.get_train_json()
-        self.db_ids = [d["db_id"] for d in self.train_json]
+        self.db_ids = [d["db"] for d in self.train_json]
         self.train_questions = self.data.get_train_questions()
 
 
@@ -35,10 +35,10 @@ class RandomExampleSelector(BasicExampleSelector):
         train_json = self.train_json
         indexes = list(range(len(train_json)))
         if cross_domain:
-            indexes = domain_mask(indexes, target["db_id"])
+            indexes = domain_mask(indexes, target["db"])
         selected_indexes = random.sample(indexes, num_example)
         if cross_domain:
-            selected_indexes = retrieve_index(selected_indexes, target["db_id"])
+            selected_indexes = retrieve_index(selected_indexes, target["db"])
         return [train_json[index] for index in selected_indexes]
 
 
@@ -67,8 +67,8 @@ class CosineSimilarExampleSelector(BasicExampleSelector):
         pairs_sorted = sorted(pairs, key=lambda x: x[0], reverse=True)
         top_pairs = list()
         for s, index in pairs_sorted:
-            similar_db_id = train_json[index]["db_id"]
-            if cross_domain and similar_db_id == target["db_id"]:
+            similar_db_id = train_json[index]["db"]
+            if cross_domain and similar_db_id == target["db"]:
                 continue
             if train_json[index]["question"] == target["question"]:
                 continue
@@ -101,8 +101,8 @@ class EuclideanDistanceExampleSelector(BasicExampleSelector):
         pairs_sorted = sorted(pairs, key=lambda x: x[0])
         top_pairs = list()
         for d, index in pairs_sorted:
-            similar_db_id = train_json[index]["db_id"]
-            if cross_domain and similar_db_id == target["db_id"]:
+            similar_db_id = train_json[index]["db"]
+            if cross_domain and similar_db_id == target["db"]:
                 continue
             top_pairs.append((index, d))
             if len(top_pairs) >= num_example:
@@ -135,8 +135,8 @@ class EuclideanDistanceThresholdExampleSelector(BasicExampleSelector):
         pairs_sorted = sorted(pairs, key=lambda x: x[0])
         top_pairs = list()
         for d, index in pairs_sorted:
-            similar_db_id = train_json[index]["db_id"]
-            if (cross_domain and similar_db_id == target["db_id"]) or d > self.threshold:
+            similar_db_id = train_json[index]["db"]
+            if (cross_domain and similar_db_id == target["db"]) or d > self.threshold:
                 continue
             top_pairs.append((index, d))
             # self.top_distances.append(d)
@@ -176,8 +176,8 @@ class EuclideanDistanceSkeletonSimilarThresholdSelector(BasicExampleSelector):
         pairs_sorted = sorted(pairs, key=lambda x: x[0])
         top_pairs = list()
         for d, index in pairs_sorted:
-            similar_db_id = train_json[index]["db_id"]
-            if cross_domain and similar_db_id == target["db_id"]:
+            similar_db_id = train_json[index]["db"]
+            if cross_domain and similar_db_id == target["db"]:
                 continue
             # Skeleton similarity
             if jaccard_similarity(train_json[index]["query_skeleton"], target["query_skeleton"]) < self.threshold:
@@ -188,8 +188,8 @@ class EuclideanDistanceSkeletonSimilarThresholdSelector(BasicExampleSelector):
 
         if len(top_pairs) < num_example:
             for d, index in pairs_sorted:
-                similar_db_id = train_json[index]["db_id"]
-                if cross_domain and similar_db_id == target["db_id"]:
+                similar_db_id = train_json[index]["db"]
+                if cross_domain and similar_db_id == target["db"]:
                     continue
                 # Skeleton similarity
                 if jaccard_similarity(train_json[index]["query_skeleton"], target["query_skeleton"]) >= self.threshold:
@@ -227,8 +227,8 @@ class EuclideanDistanceQuestionMaskSelector(BasicExampleSelector):
         pairs_sorted = sorted(pairs, key=lambda x: x[0])
         top_pairs = list()
         for d, index in pairs_sorted:
-            similar_db_id = train_json[index]["db_id"]
-            if cross_domain and similar_db_id == target["db_id"]:
+            similar_db_id = train_json[index]["db"]
+            if cross_domain and similar_db_id == target["db"]:
                 continue
             top_pairs.append((index, d))
             if len(top_pairs) >= num_example:
@@ -260,8 +260,8 @@ class EuclideanDistancePreSkeletonSimilarThresholdSelector(BasicExampleSelector)
         pairs_sorted = sorted(pairs, key=lambda x: x[0])
         top_pairs = list()
         for d, index in pairs_sorted:
-            similar_db_id = train_json[index]["db_id"]
-            if cross_domain and similar_db_id == target["db_id"]:
+            similar_db_id = train_json[index]["db"]
+            if cross_domain and similar_db_id == target["db"]:
                 continue
             # Skeleton similarity
             if jaccard_similarity(train_json[index]["pre_skeleton"], target["pre_skeleton"]) < self.threshold:
@@ -272,8 +272,8 @@ class EuclideanDistancePreSkeletonSimilarThresholdSelector(BasicExampleSelector)
 
         if len(top_pairs) < num_example:
             for d, index in pairs_sorted:
-                similar_db_id = train_json[index]["db_id"]
-                if cross_domain and similar_db_id == target["db_id"]:
+                similar_db_id = train_json[index]["db"]
+                if cross_domain and similar_db_id == target["db"]:
                     continue
                 # Skeleton similarity
                 if jaccard_similarity(train_json[index]["pre_skeleton"], target["pre_skeleton"]) >= self.threshold:
@@ -308,8 +308,8 @@ class EuclideanDistancePreSkeletonSimilarPlusSelector(BasicExampleSelector):
         pairs_sorted = sorted(pairs, key=lambda x: x[0])
         top_pairs = list()
         for d, index in pairs_sorted:
-            similar_db_id = train_json[index]["db_id"]
-            if cross_domain and similar_db_id == target["db_id"]:
+            similar_db_id = train_json[index]["db"]
+            if cross_domain and similar_db_id == target["db"]:
                 continue
             top_pairs.append((index, d))
             if len(top_pairs) >= num_example:
@@ -345,8 +345,8 @@ class EuclideanDistanceQuestionMaskPreSkeletonSimilarThresholdSelector(BasicExam
         pairs_sorted = sorted(pairs, key=lambda x: x[0])
         top_pairs = list()
         for d, index in pairs_sorted:
-            similar_db_id = train_json[index]["db_id"]
-            if cross_domain and similar_db_id == target["db_id"]:
+            similar_db_id = train_json[index]["db"]
+            if cross_domain and similar_db_id == target["db"]:
                 continue
             # Skeleton similarity
             if jaccard_similarity(train_json[index]["pre_skeleton"], target["pre_skeleton"]) < self.threshold:
@@ -357,8 +357,8 @@ class EuclideanDistanceQuestionMaskPreSkeletonSimilarThresholdSelector(BasicExam
 
         if len(top_pairs) < num_example:
             for d, index in pairs_sorted:
-                similar_db_id = train_json[index]["db_id"]
-                if cross_domain and similar_db_id == target["db_id"]:
+                similar_db_id = train_json[index]["db"]
+                if cross_domain and similar_db_id == target["db"]:
                     continue
                 # Skeleton similarity
                 if jaccard_similarity(train_json[index]["pre_skeleton"], target["pre_skeleton"]) >= self.threshold:
@@ -397,8 +397,8 @@ class EuclideanDistanceQuestionMaskPreSkeletonSimilarThresholdShiftSelector(Basi
         pairs_sorted = sorted(pairs, key=lambda x: x[0])
         top_pairs = list()
         for d, index in pairs_sorted:
-            similar_db_id = train_json[index]["db_id"]
-            if cross_domain and similar_db_id == target["db_id"]:
+            similar_db_id = train_json[index]["db"]
+            if cross_domain and similar_db_id == target["db"]:
                 continue
             # Skeleton similarity
             if jaccard_similarity(train_json[index]["pre_skeleton"], target["pre_skeleton"]) < self.threshold:

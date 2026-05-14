@@ -59,7 +59,7 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
     db_schemas = {}
     
     for key, table_info in beaver_tables.items():
-        db_id = table_info['db_id']
+        db_id = table_info['db']
         
         if db_id not in db_schemas:
             db_schemas[db_id] = {
@@ -72,7 +72,7 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
             }
         
         schema = db_schemas[db_id]
-        table_name = table_info['table_name_original']
+        table_name = table_info['table_name']
         if split in ["neutron", "nova", "csail_stata_neutron", "csail_stata_nova"]:
             table_name = table_name.lower()
         table_idx = len(schema['table_names_original'])
@@ -81,14 +81,14 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
         schema['table_names_original'].append(table_name)
         
         # Add wildcard column for the table
-        schema['column_names_original'].append([-1, '*'])
+        schema['column_names'].append([-1, '*'])
         schema['column_types'].append('text')
         
         # Add columns
-        for col_name, col_type in zip(table_info['column_names_original'], table_info['column_types']):
+        for col_name, col_type in zip(table_info['column_names'], table_info['column_types']):
             if split in ["neutron", "nova", "csail_stata_neutron", "csail_stata_nova"]:
                 col_name = col_name.lower()
-            schema['column_names_original'].append([table_idx, col_name])
+            schema['column_names'].append([table_idx, col_name])
             schema['column_types'].append(col_type)
         
         # Add primary key (if exists)
@@ -99,7 +99,7 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
             
             for pk_col in pk_list:
                 # Find the column index in the full column list
-                for idx, (tbl_idx, col_name) in enumerate(schema['column_names_original']):
+                for idx, (tbl_idx, col_name) in enumerate(schema['column_names']):
                     if tbl_idx == table_idx and col_name == pk_col:
                         schema['primary_keys'].append(idx)
                         break
@@ -131,7 +131,7 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
                                 break
                     
                     if target_table_idx is not None:
-                        for idx, (tbl_idx, col_name) in enumerate(schema['column_names_original']):
+                        for idx, (tbl_idx, col_name) in enumerate(schema['column_names']):
                             if tbl_idx == target_table_idx and col_name == target_col:
                                 target_idx = idx
                                 break
@@ -157,7 +157,7 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
                                     break
                         
                         if target_table_idx is not None:
-                            for idx, (tbl_idx, col_name) in enumerate(schema['column_names_original']):
+                            for idx, (tbl_idx, col_name) in enumerate(schema['column_names']):
                                 if tbl_idx == target_table_idx and col_name == target_col:
                                     target_idx = idx
                                     break
@@ -232,50 +232,50 @@ def convert_beaver_questions_to_dinsql_format(beaver_questions_path, output_path
     
     dinsql_format = []
     for idx, question_info in enumerate(beaver_questions):
-        if question_info['db_id'] == 'dw':
+        if question_info['db'] == 'dw':
             base_item = {
-            'instance_id': f'beaver_dw_{idx:03d}',
+            'id': f'beaver_dw_{idx:03d}',
             'question': question_info['question'],
-            'db_id': question_info['db_id'],
+            'db': question_info['db'],
             'gold_sql': question_info.get('sql', ''),
             # 'gold_sql': question_info.get('sql', '').upper(),
         }
         else:
             base_item = {
-                'instance_id': f'beaver_dw_{idx:03d}',
+                'id': f'beaver_dw_{idx:03d}',
                 'question': question_info['question'],
-                'db_id': question_info['db_id'],
+                'db': question_info['db'],
                 'gold_sql': question_info.get('sql', ''),
         }
         
         # Option 1+: Store gold_tables for filtering
         if option >= 1:
             if option == 1:
-                 base_item['gold_tables'] = question_info.get('top_k_tables', [])
+                 base_item['tables'] = question_info.get('top_k_tables', [])
             else:
-                 base_item['gold_tables'] = question_info.get('gold_tables', [])
+                 base_item['tables'] = question_info.get('tables', [])
             # strip db#sep# from gold_tables generic and lowercase
-            if 'dw' in question_info['db_id'] or 'dw_real' in question_info['db_id']:
+            if 'dw' in question_info['db'] or 'dw_real' in question_info['db']:
                 # do not lowercase
-                base_item['gold_tables'] = [t.split('#sep#')[1] if '#sep#' in t else t for t in base_item['gold_tables']]
+                base_item['tables'] = [t.split('#sep#')[1] if '#sep#' in t else t for t in base_item['tables']]
             else:
                 # lowercase
-                base_item['gold_tables'] = [t.split('#sep#')[1].lower() if '#sep#' in t else t.lower() for t in base_item['gold_tables']]
+                base_item['tables'] = [t.split('#sep#')[1].lower() if '#sep#' in t else t.lower() for t in base_item['tables']]
             base_item['question'] = (
                 f"{question_info['question']}\n\n"
-                f"[Gold Tables]\n{', '.join(base_item['gold_tables']).upper()}"
+                f"[Gold Tables]\n{', '.join(base_item['tables']).upper()}"
             )
         
         # Option 2+: Add mapping to question
         if option >= 2:
-            mapping = question_info.get('mapping', {})
+            mapping = question_info.get('column_mapping', {})
             if mapping:
                 mapping_str = format_mapping_for_prompt(mapping)
                 base_item['question'] = (
                     f"{base_item['question']}\n\n"
                     f"[Schema Mapping Hints]\n{mapping_str}"
                 )
-                base_item['mapping'] = mapping
+                base_item['column_mapping'] = mapping
         
         # Option 2+: Add join keys
         if option >= 2:
@@ -290,44 +290,27 @@ def convert_beaver_questions_to_dinsql_format(beaver_questions_path, output_path
 
         # Option 3: Add external knowledge and subquery info
         if option >= 3:
-            internal_evidence = question_info.get('internal_evidence', [])
-            external_evidence = question_info.get('external_evidence', [])
-            subquery_gold_questions = question_info.get('subquery_gold_questions', [])
+            domain_knowledge = question_info.get('domain_knowledge', [])
+            sub_questions = question_info.get('sub_questions', [])
             
-            # external knowledge = internal evidence + external evidence
-            external_knowledge = internal_evidence + external_evidence
-
-            if external_knowledge:
-                base_item['question'] += "\n\n-- External Knowledge (database-wide):\n"
-                base_item['question'] += "\n".join(external_knowledge)
+            if domain_knowledge:
+                base_item['question'] += "\n\n-- Domain Knowledge (database-wide):\n"
+                base_item['question'] += "\n".join(domain_knowledge)
                 base_item['question'] += "\n"
-                base_item['question'] += "You should use the external knowledge to help determine which tables and columns to use in the SQL statement as well as constructing the SQL statement."
+                base_item['question'] += "You should use the domain knowledge to help determine which tables and columns to use in the SQL statement as well as constructing the SQL statement."
 
-            if subquery_gold_questions:
+            if sub_questions:
                 base_item['question'] += "\n\n-- Subquery Gold Questions (database-wide):\n"
-                base_item['question'] += "\n".join(subquery_gold_questions)
+                base_item['question'] += "\n".join(sub_questions)
                 base_item['question'] += "\n"
                 base_item['question'] += "You must answer each subquery individually and then combine them to form the complete SQL statement. Each subquery you generate must be explicitly used in the final query you generate; do not simplify the subqueries you generate for implementation in the final query."
             
             if templates:
-                source_file = question_info.get('source_file')
-                if source_file != 'unknown' and 'subquery' not in source_file:
+                detailed_category = question_info.get('detailed_category')
+                if detailed_category and detailed_category != 'real' and detailed_category in templates:
                     base_item['question'] += "\n\n Here is an explanation of which numbered subqueries you are given correspond to which query in the query structure you were provided:\n"
-                    # if base_item['db_id'] == 'dw' or base_item['db_id'] == 'dw_real':
-                    #     source_file = source_file.replace('_with_domain', '')
-                    #     source_file = source_file.replace('_without_domain', '')
-                    #     source_file = source_file.replace('_with_domain', '')
-                    #     source_file = source_file.replace('_without_domain', '')
-                    if base_item['db_id'] in ['dw', 'dw_real', 'sp', 'csail_stata_neutron', 'csail_stata_nova']:
-                        source_file = source_file.replace('_sampled.json', '')
-                        source_file = source_file.replace('filtered_', '')
-                        source_file = source_file.replace('_with_domain', '')
-                        source_file = source_file.replace('_without_domain', '')
-                        source_file = source_file.replace('.json', '')
-                    base_item['question'] += f"{templates[source_file]['structure']}"
-                    base_item['question'] += "\n"
-                    base_item['question'] += "\n"
-                    base_item['question'] += templates[source_file]['subquery_decomposition']
+                    base_item['question'] += f"{templates[detailed_category]['structure']}\n\n"
+                    base_item['question'] += templates[detailed_category]['subquery_decomposition']
         
         dinsql_format.append(base_item)
     
@@ -346,7 +329,7 @@ def collect_all_gold_tables(questions):
     """Collect all unique gold tables from all questions"""
     all_gold_tables = set()
     for q in questions:
-        gold_tables = q.get('gold_tables', [])
+        gold_tables = q.get('tables', [])
         # Clean gold tables
         clean_gold_tables = [t.split('#sep#')[1] if '#sep#' in t else t for t in gold_tables]
         all_gold_tables.update(clean_gold_tables)

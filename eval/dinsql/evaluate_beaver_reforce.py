@@ -243,7 +243,7 @@ def evaluate_dinsql_results(output_dir, dev_json_path, mysql_creds_path, gold_re
             # Beaver format: dict of tables
             for table_key, table_info in tables_data.items():
                 if 'table_name_original' in table_info:
-                    schema_tables.append(table_info['table_name_original'])
+                    schema_tables.append(table_info['table_name'])
                 else:
                      # fallback to key if needed
                      schema_tables.append(table_key)
@@ -273,7 +273,7 @@ def evaluate_dinsql_results(output_dir, dev_json_path, mysql_creds_path, gold_re
     print("=" * 80)
 
     for idx, item in enumerate(dev_data):
-        instance_id = item.get("instance_id", f"beaver_dw_{idx:03d}")
+        instance_id = item.get("id", f"beaver_dw_{idx:03d}")
         # if instance_id == "beaver_dw_025":
         #     print("Skipping beaver_dw_025")
         #     continue

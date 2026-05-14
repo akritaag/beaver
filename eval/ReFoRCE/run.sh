@@ -48,7 +48,11 @@ NUM_VOTES=8
 NUM_WORKERS=16
 
 # Export DB name for sql.py env-var fallback
-export MYSQL_DATABASE="${DATASET}"
+DB_NAME="${DATASET}"
+if [ "${DATASET}" == "dw_real" ]; then
+    DB_NAME="dw"
+fi
+export MYSQL_DATABASE="${DB_NAME}"
 
 # --- Preprocessing ---
 mkdir -p "preprocessed_data/${DATASET}"

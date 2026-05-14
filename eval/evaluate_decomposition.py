@@ -101,7 +101,7 @@ def evaluate_single_entry(subdir_path, gold_data, chat_client: GPTChat, output_b
             return result_info
 
         gold_entry = gold_data[index]
-        reference_sqls = gold_entry.get("subquery_gold_queries", [])
+        reference_sqls = gold_entry.get("sub_sqls", [])
         
         # Skip if no prompt decomposition
         if not reference_sqls or len(reference_sqls) == 0:

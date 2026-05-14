@@ -256,8 +256,11 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=16)
 
     parser.add_argument('--omnisql_format_pth', type=str, default=None)
-    parser.add_argument('--gold_result_path', type=str, default="../../data/gold_result")
+    parser.add_argument('--gold_result_path', type=str, default=None)
     args = parser.parse_args()
+
+    if args.gold_result_path is None:
+        args.gold_result_path = os.path.join(args.output_path, "gold_results")
     prompt_all = Prompts()
 
     full_db_id = {}
@@ -272,11 +275,11 @@ if __name__ == '__main__':
             full_tb_info = {}
             
             for example in data:
-                if example["instance_id"].startswith("local"):
-                    dictionaries.append(example["instance_id"])
-                    task_dict[example["instance_id"]] = example["question"]
-                    full_tb_info[example["instance_id"]] = example["db_desc"]
-                    full_db_id[example["instance_id"]] = example["db_id"]
+                if example["id"].startswith("local"):
+                    dictionaries.append(example["id"])
+                    task_dict[example["id"]] = example["question"]
+                    full_tb_info[example["id"]] = example["db_desc"]
+                    full_db_id[example["id"]] = example["db"]
         elif args.task == "beaver":
             with open(args.omnisql_format_pth) as f:
                 data = json.load(f)
@@ -285,12 +288,12 @@ if __name__ == '__main__':
             full_tb_info = {}
             
             for example in data:
-                dictionaries.append(example["instance_id"])
-                task_dict[example["instance_id"]] = example["question"]
-                full_tb_info[example["instance_id"]] = example["db_desc"]
-                full_db_id[example["instance_id"]] = example["db_id"]
+                dictionaries.append(example["id"])
+                task_dict[example["id"]] = example["question"]
+                full_tb_info[example["id"]] = example["db_desc"]
+                full_db_id[example["id"]] = example["db"]
                 if "gold_sql" in example:
-                    full_gold_sql[example["instance_id"]] = example["gold_sql"]
+                    full_gold_sql[example["id"]] = example["gold_sql"]
         elif args.task in ["BIRD", "spider"]:
             with open(args.omnisql_format_pth) as f:
                 data = json.load(f)
@@ -304,7 +307,7 @@ if __name__ == '__main__':
                 dictionaries.append(instance_id)
                 task_dict[instance_id] = example["question"]
                 full_tb_info[instance_id] = example["input_seq"]
-                full_db_id[instance_id] = example["db_id"]     
+                full_db_id[instance_id] = example["db"]     
                 full_gold_sql[instance_id] = example["SQL"]              
     else:
         dictionaries, task_dict = get_dictionary(args.db_path, args.task)

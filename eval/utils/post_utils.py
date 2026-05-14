@@ -44,8 +44,8 @@ def spider2_postprocess_single_sql(
     table_json = load_json(table_json)
 
     # Create mappings from the JSON data
-    dbid_to_tables = {entry["db_id"]: entry["table_names_original"] for entry in table_json}
-    instanceid_to_dbid = {entry["instance_id"]: entry["db_id"] for entry in dev_json}
+    dbid_to_tables = {entry["db"]: entry["table_names_original"] for entry in table_json}
+    instanceid_to_dbid = {entry["id"]: entry["db"] for entry in dev_json}
 
     # Check if the instance ID is in the JSON mapping
     assert instance_id in instanceid_to_dbid, "Check the dev.json for the provided instance_id."
@@ -79,16 +79,16 @@ def main_postprocess(root_path, dev_json_path, table_json_path, method):
     assert method in ['DAIL-SQL', 'DIN-SQL', 'CHESS', 'CODES']    
     if method == 'CODES':
         dbid_to_tables = {
-           entry["db_id"]: [schema_item["table_name"] for schema_item in entry["schema"]["schema_items"]]
+           entry["db"]: [schema_item["table_name"] for schema_item in entry["schema"]["schema_items"]]
             for entry in table_json
         }
     elif method in ('DAIL-SQL', 'DIN-SQL'):
-        dbid_to_tables = {entry["db_id"]: entry["table_names_original"] for entry in table_json}
+        dbid_to_tables = {entry["db"]: entry["table_names_original"] for entry in table_json}
     else:
         raise NotImplementedError
-    dbid_to_projDataset = {entry['db_id']: entry['table_to_projDataset'] for entry in table_json}
+    dbid_to_projDataset = {entry['db']: entry['table_to_projDataset'] for entry in table_json}
 
-    instanceid_to_dbid = {entry["instance_id"]: entry["db_id"] for entry in dev_json}
+    instanceid_to_dbid = {entry["id"]: entry["db"] for entry in dev_json}
 
 
     new_root_path = root_path + "-postprocessed"

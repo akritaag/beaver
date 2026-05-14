@@ -9,7 +9,7 @@ import sys
 # Load environment variables if dotenv exists
 try:
     from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+    load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 except ImportError:
     pass
 
@@ -36,6 +36,8 @@ def get_mysql_credentials(db_id, creds_path=None):
         db_id = "csail_stata_neutron"
     elif db_id == "nova":
         db_id = "csail_stata_nova"
+    elif db_id == "dw_real":
+        db_id = "dw"
     
     if host and user and password:
         return {

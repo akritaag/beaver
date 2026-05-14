@@ -249,7 +249,7 @@ def evaluate_dailsql_results(results_dir, dev_json_path, mysql_creds_path, gold_
             # Beaver format: dict of tables
             for table_key, table_info in tables_data.items():
                 if 'table_name_original' in table_info:
-                    schema_tables.append(table_info['table_name_original'])
+                    schema_tables.append(table_info['table_name'])
                 else:
                      # fallback to key if needed
                      schema_tables.append(table_key)
@@ -279,7 +279,7 @@ def evaluate_dailsql_results(results_dir, dev_json_path, mysql_creds_path, gold_
     print("=" * 80)
 
     for idx, item in enumerate(dev_data):
-        instance_id = item.get("instance_id", f"beaver_{item.get('db_id', 'unknown')}_{idx:03d}")
+        instance_id = item.get("id", f"beaver_{item.get('db', 'unknown')}_{idx:03d}")
         instance_dir = os.path.join(results_dir, instance_id)
         result_csv_path = os.path.join(instance_dir, "results.csv")  # DAIL-SQL uses "results.csv"
 

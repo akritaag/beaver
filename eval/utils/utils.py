@@ -94,7 +94,7 @@ def db_stats(db_stats_list):
 
 def db_stats_bar_chart(db_stats_list):
 
-    db_ids = [item['db_id'] for item in db_stats_list]
+    db_ids = [item['db'] for item in db_stats_list]
     table_counts = [item['db_stats']["No. of tables"] for item in db_stats_list]
     total_columns = [item['db_stats']["No. of columns"] for item in db_stats_list]
     avg_columns = [item['db_stats']["Avg. No. of columns per table"] for item in db_stats_list]

@@ -34,8 +34,8 @@ def get_join_keys(join_keys):
     return "\n".join(desc)
 
 
-def get_knowledge(internal_knowledge, external_knowledge):
-    return "\n".join(internal_knowledge + external_knowledge)
+def get_knowledge(domain_knowledge):
+    return "\n".join(domain_knowledge)
 
 
 def get_decomp(decomps):
@@ -57,32 +57,21 @@ def get_user_prompt(
     ]
 
     if eval_config.mapping:
-        desc.append(f"Mapping:\n{get_mapping(q['mapping'])}")
+        desc.append(f"Mapping:\n{get_mapping(q['column_mapping'])}")
 
     if eval_config.join_keys:
         desc.append(f"Join keys:\n{get_join_keys(q['join_keys'])}")
 
-    if eval_config.knowledge and get_knowledge(q['internal_evidence'], q['external_evidence']) != '':
+    if eval_config.knowledge and get_knowledge(q['domain_knowledge']) != '':
         desc.append(
-            f"Domain knowledge:\n{get_knowledge(q['internal_evidence'], q['external_evidence'])}"
+            f"Domain knowledge:\n{get_knowledge(q['domain_knowledge'])}"
         )
 
-    if eval_config.decomp and get_decomp(q["subquery_gold_questions"]) != "":
-        desc.append(f"Query decomposition:\n{get_decomp(q['subquery_gold_questions'])}")
+    if eval_config.decomp and get_decomp(q["sub_questions"]) != "":
+        desc.append(f"Query decomposition:\n{get_decomp(q['sub_questions'])}")
 
     return user("\n\n".join(desc))
 
-STRUCTURE_MAPPING = {
-    'filtered_chain_with_domain.json': 'chain',
-    'filtered_tree_with_domain.json': 'tree',
-    'filtered_chain_tree_with_domain.json': 'chain_tree',
-    'filtered_tree_chain_with_domain.json': 'tree_chain',
-    'filtered_chain_without_domain.json': 'chain',
-    'filtered_tree_without_domain.json': 'tree',
-    'filtered_chain_tree_without_domain.json': 'chain_tree',
-    'filtered_tree_chain_without_domain.json': 'tree_chain',
-    'filtered_subquery_column_with_domain.json': None
-}
 
 def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: str = "../../data"):
     structures = read_json(f"{data_dir}/template_structure.json")
@@ -94,7 +83,7 @@ def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: 
         preds = read_json(f"{data_dir}/{dataset}/reranked_preds.json")
 
     example_prompt = [
-        get_user_prompt(example, example["gold_tables"], dev_tables, eval_config),
+        get_user_prompt(example, example["tables"], dev_tables, eval_config),
         assistant(f"SQL: <ans>{example['sql']}</ans>"),
     ]
 
@@ -104,11 +93,11 @@ def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: 
     for q_idx, q in enumerate(tqdm(qs)):
         # print(q_idx)
 
-        q_knowledge = eval_config.knowledge and get_knowledge(q['internal_evidence'], q['external_evidence']) != ''
-        q_decomp = eval_config.decomp and get_decomp(q["subquery_gold_questions"]) != ""
+        q_knowledge = eval_config.knowledge and get_knowledge(q['domain_knowledge']) != ''
+        q_decomp = eval_config.decomp and get_decomp(q["sub_questions"]) != ""
 
         if eval_config.gold_tables:
-            tables = q["gold_tables"]
+            tables = q["tables"]
         else:
             if str(q_idx) not in preds:
                 prompts.append(None)
@@ -143,8 +132,8 @@ def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: 
 
             instruction += f"Below is the structure of the SQL statement with subqueries denoted. Each provided subquery is used in the final SQL statement in such a structure."
 
-            structure_name = STRUCTURE_MAPPING[q["source_file"]]
-            if structure_name:
+            structure_name = q.get("detailed_category")
+            if structure_name and structure_name != 'real' and structure_name in structures:
                 structure = structures[structure_name]
                 instruction += f"\n\n{structure['structure']}"
 
@@ -157,7 +146,7 @@ def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: 
         prompt += [get_user_prompt(q, tables, dev_tables, eval_config)]
 
         prompts.append(prompt)
-        instance_ids.append(q.get("instance_id", f"beaver_{dataset}_{q_idx:03d}"))
+        instance_ids.append(q.get("id", f"beaver_{dataset}_{q_idx:03d}"))
 
     print(f"#prompts: {len(prompts)}")
     return prompts, instance_ids

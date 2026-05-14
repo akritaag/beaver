@@ -47,31 +47,31 @@ class SQLPrompt(BasicPrompt):
         tables_json = json.load(open(osp.join(proj_dir, f'preprocessed_data/{args.dev}/tables_preprocessed.json'), 'r', encoding='utf-8'))
         
         # Use per-question gold tables if available (Option 2+), otherwise use all tables
-        gold_tables = example.get('gold_tables', []) if hasattr(args, 'dev') else []
+        gold_tables = example.get('tables', []) if hasattr(args, 'dev') else []
         
         if gold_tables:
             # Option 2+: Use only gold tables for this question
             from utils.utils import get_sql_for_database_from_tables_json_filtered
             sqls = get_sql_for_database_from_tables_json_filtered(
-                example["db_id"], 
+                example["db"], 
                 tables_json, 
                 gold_table_names=gold_tables,
                 use_column_desc=args.use_column_desc
             )
         else:
             # Option 1 or no gold_tables: Use all tables
-            sqls = get_sql_for_database_from_tables_json(example["db_id"], tables_json, use_column_desc=args.use_column_desc)
+            sqls = get_sql_for_database_from_tables_json(example["db"], tables_json, use_column_desc=args.use_column_desc)
 
         prompt_info = self.template_info.format("\n\n".join(sqls))
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
 
-        if example['instance_id'].startswith('local'):
+        if example['id'].startswith('local'):
             dialect1, dialect2 = 'SQLite', 'SQLite'
-        elif example['instance_id'].startswith('bq') or example['instance_id'].startswith('ga'):
+        elif example['id'].startswith('bq') or example['id'].startswith('ga'):
             dialect1, dialect2 = 'Goole_BigQuery', "Goole BigQuery. Don't apply `your_project.your_dataset` prefix to table names, I will fix this issue later"
-        elif example['instance_id'].startswith('sf'):
+        elif example['id'].startswith('sf'):
             dialect1, dialect2 = 'Snowflake', 'Snowflake. Column names must be enclosed in double quotes, and table names must not be enclosed'
-        elif example['instance_id'].startswith('beaver'):
+        elif example['id'].startswith('beaver'):
             dialect1, dialect2 = 'MySQL', 'MySQL'
         else:
             raise NotImplementedError
@@ -95,19 +95,19 @@ class SQLPrompt(BasicPrompt):
                 # Use filtered sample rows for gold tables
                 from utils.utils import get_sample_rows_for_database_from_tables_json_filtered
                 sample_rows = get_sample_rows_for_database_from_tables_json_filtered(
-                    example["db_id"], 
+                    example["db"], 
                     tables_json,
                     gold_table_names=gold_tables
                 )
             else:
                 # Use all sample rows
-                sample_rows = get_sample_rows_for_database_from_tables_json(example["db_id"], tables_json)  
+                sample_rows = get_sample_rows_for_database_from_tables_json(example["db"], tables_json)  
             new = self.sample_rows_info.format(sample_rows)
             if check_length(prompt_components, new):
                 prompt_components.append(new)
             else:
                 print("Sample rows info too long, skip. length: ", len(new))
-            print(example["instance_id"])
+            print(example["id"])
         if args.use_external_knowledge and example['external_knowledge'] is not None:
             print(example['external_knowledge'])
             with open(osp.join(proj_dir, '../../resource/documents', example['external_knowledge']), "r", encoding="utf-8") as file:
@@ -163,7 +163,7 @@ class TextPrompt(BasicPrompt):
         schemas = "\n".join([f"{_.name}: {', '.join(_.schema)}" for _ in example["tables"]])
 
         prompt_info = self.template_info.format(schemas)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -187,7 +187,7 @@ class NumberSignPrompt(BasicPrompt):
         schemas = "\n".join([f"# {_.name}({', '.join(_.schema)})" for _ in example["tables"]])
 
         prompt_info = self.template_info.format(schemas)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -215,7 +215,7 @@ class BaselinePrompt(BasicPrompt):
 
         # format prompt
         prompt_info = self.template_info.format(schemas, str(foreign_keys).replace("'", ""))
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -242,7 +242,7 @@ class InstructionPrompt(BasicPrompt):
         schemas = "\n".join([f"{_.name}({', '.join(_.schema)})" for _ in example["tables"]])
 
         prompt_info = self.template_info.format(example["question"], schemas)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -273,7 +273,7 @@ class TextWithForeignKeyPrompt(BasicPrompt):
         foreign_keys = f"{', '.join(foreign_keys)}"
 
         prompt_info = self.template_info.format(schemas, foreign_keys)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -308,7 +308,7 @@ class NumberSignWithForeignKeyPrompt(BasicPrompt):
         foreign_keys = f"# Foreign_keys=({', '.join(foreign_keys)})"
 
         prompt_info = self.template_info.format(schemas, foreign_keys)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -330,7 +330,7 @@ class BaselineWithoutForeignKeyPrompt(BasicPrompt):
 
         # format prompt
         prompt_info = self.template_info.format(schemas)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -364,7 +364,7 @@ class InstructionWithForeignKeyPrompt(BasicPrompt):
         foreign_keys = f"{', '.join(foreign_keys)}"
 
         prompt_info = self.template_info.format(example["question"], schemas, foreign_keys)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -384,10 +384,10 @@ class SQLWithRulePrompt(BasicPrompt):
 
     def format_question(self, example: dict, args):
         tables_json = json.load(open(osp.join(proj_dir, f'preprocessed_data/{args.dev}/tables_preprocessed.json', 'r', encoding='utf-8')))
-        sqls = get_sql_for_database_from_tables_json(example["db_id"], tables_json)
+        sqls = get_sql_for_database_from_tables_json(example["db"], tables_json)
 
         prompt_info = self.template_info.format("\n\n".join(sqls))
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -408,7 +408,7 @@ class TextWithRulePrompt(BasicPrompt):
         schemas = "\n".join([f"{_.name}: {', '.join(_.schema)}" for _ in example["tables"]])
 
         prompt_info = self.template_info.format(schemas)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -432,7 +432,7 @@ class NumberSignWithoutRulePrompt(BasicPrompt):
         schemas = "\n".join([f"# {_.name}({', '.join(_.schema)})" for _ in example["tables"]])
 
         prompt_info = self.template_info.format(schemas)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -456,7 +456,7 @@ class InstructionWithRulePrompt(BasicPrompt):
         schemas = "\n".join([f"{_.name}({', '.join(_.schema)})" for _ in example["tables"]])
 
         prompt_info = self.template_info.format(example["question"], schemas)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -476,10 +476,10 @@ class SQLCOTPrompt(BasicPrompt):
 
     def format_question(self, example: dict, args):
         tables_json = json.load(open(osp.join(proj_dir, f'preprocessed_data/{args.dev}/tables_preprocessed.json', 'r', encoding='utf-8')))
-        sqls = get_sql_for_database_from_tables_json(example["db_id"], tables_json)
+        sqls = get_sql_for_database_from_tables_json(example["db"], tables_json)
 
         prompt_info = self.template_info.format("\n\n".join(sqls))
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -503,7 +503,7 @@ class TextCOTPrompt(BasicPrompt):
         schemas = "\n".join([f"{_.name}: {', '.join(_.schema)}" for _ in example["tables"]])
 
         prompt_info = self.template_info.format(schemas)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -530,7 +530,7 @@ class NumberSignCOTPrompt(BasicPrompt):
         schemas = "\n".join([f"# {_.name}({', '.join(_.schema)})" for _ in example["tables"]])
 
         prompt_info = self.template_info.format(schemas)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -557,7 +557,7 @@ class InstructionCOTPrompt(BasicPrompt):
         schemas = "\n".join([f"{_.name}({', '.join(_.schema)})" for _ in example["tables"]])
 
         prompt_info = self.template_info.format(example["question"], schemas)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question
 
         if prompt_extra_info is None or prompt_extra_info == "":
@@ -592,7 +592,7 @@ class CBRPrompt(BasicPrompt):
         foreign_keys = f"{', '.join(foreign_keys)}"
 
         prompt_info = self.template_info.format(tables, columns, foreign_keys)
-        prompt_extra_info = self.get_extra_info(example["db_id"])
+        prompt_extra_info = self.get_extra_info(example["db"])
         prompt_question = self.template_question.format(example["question"])
 
         if prompt_extra_info is None or prompt_extra_info == "":

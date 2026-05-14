@@ -46,9 +46,9 @@ def creating_schema_preprocessed(DATASET_JSON):
     p_keys = []
     
     for db_schema in schema_list:
-        db_id = db_schema['db_id']
+        db_id = db_schema['db']
         tables = db_schema['table_names_original']
-        col_names = db_schema['column_names_original']
+        col_names = db_schema['column_names']
         col_types = db_schema['column_types']
         foreign_keys = db_schema['foreign_keys']
         primary_keys = db_schema['primary_keys']
@@ -82,7 +82,7 @@ def creating_schema_preprocessed(DATASET_JSON):
 
 def process_single_question(index, row, args, output_base_dir, spider_schema, spider_primary, spider_foreign):
     """Process a single question and save outputs to organized subfolder"""
-    question_id = row['instance_id']
+    question_id = row['id']
     question_dir = Path(output_base_dir) / question_id
     question_dir.mkdir(parents=True, exist_ok=True)
     
@@ -99,7 +99,7 @@ def process_single_question(index, row, args, output_base_dir, spider_schema, sp
     logger.info("="*80)
     logger.info(f"Processing question: {question_id}")
     logger.info(f"Question text: {row['question']}")
-    logger.info(f"Database: {row['db_id']}")
+    logger.info(f"Database: {row['db']}")
     logger.info("="*80)
     
     try:
@@ -107,13 +107,13 @@ def process_single_question(index, row, args, output_base_dir, spider_schema, sp
         logger.info("\n[STEP 1: Schema Linking]")
         schema_links = None
         join_keys = row.get('join_keys')
-        gold_tables = row.get('gold_tables')
+        gold_tables = row.get('tables')
         if join_keys:
              logger.info(f"[Using Join Keys]\n{join_keys}")
 
         while schema_links is None:
             try:
-                schema_linking_input = schema_linking_prompt_maker(row['question'], row['db_id'], spider_schema, spider_foreign, join_keys=join_keys, table_filter=gold_tables)
+                schema_linking_input = schema_linking_prompt_maker(row['question'], row['db'], spider_schema, spider_foreign, join_keys=join_keys, table_filter=gold_tables)
                 logger.info(f"[Input Prompt]\n{schema_linking_input}\n[End Input Prompt]")
                 res = GPT4o_generation(schema_linking_input, model=args.model)
                 assert len(res['response']) == 1
@@ -135,7 +135,7 @@ def process_single_question(index, row, args, output_base_dir, spider_schema, sp
         classification = None
         while classification is None:
             try:
-                classification_input = classification_prompt_maker(row['question'], row['db_id'], schema_links[1:], spider_schema, spider_foreign, join_keys=join_keys, table_filter=gold_tables)
+                classification_input = classification_prompt_maker(row['question'], row['db'], schema_links[1:], spider_schema, spider_foreign, join_keys=join_keys, table_filter=gold_tables)
                 logger.info(f"[Input Prompt]\n{classification_input}\n[End Input Prompt]")
                 res = GPT4o_generation(classification_input, model=args.model)
                 assert len(res['response']) == 1
@@ -197,7 +197,7 @@ def process_single_question(index, row, args, output_base_dir, spider_schema, sp
             debugged_SQL = None
             while debugged_SQL is None:
                 try:
-                    debug_input = debuger(row['question'], row['db_id'], sql, spider_schema, spider_primary, spider_foreign, join_keys=join_keys, table_filter=gold_tables)
+                    debug_input = debuger(row['question'], row['db'], sql, spider_schema, spider_primary, spider_foreign, join_keys=join_keys, table_filter=gold_tables)
                     logger.info(f"[Debug Input for SQL {idx}]\n{debug_input}\n[End Debug Input for SQL {idx}]")
                     res = GPT4o_debug(debug_input, model=args.model)
                     assert len(res['response']) == 1
@@ -277,7 +277,7 @@ if __name__ == '__main__':
     with Pool(processes=args.processes) as pool:
         with tqdm(total=val_df.shape[0]) as pbar:
             inputs = [(index, row, args, output_dir, spider_schema, spider_primary, spider_foreign) 
-                     for index, row in val_df.iterrows() if row['instance_id'] not in pred_ids]
+                     for index, row in val_df.iterrows() if row['id'] not in pred_ids]
             print(f"Number of data samples to predict: {len(inputs)}")
             for _ in pool.starmap(process_single_question, inputs):
                 pbar.update(1)

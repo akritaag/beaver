@@ -20,7 +20,7 @@ def format_join(join_pair):
     return f"{left.split('.')[0]} joins {right.split('.')[0]} on {left} = {right}"
 
 def format_table(table_name, corpus_tables, use_instance: bool, corpus_markdowns=None, trim=False):
-    rows = corpus_tables[table_name]["rows"]
+    rows = corpus_tables[table_name]["example_rows"]
     if trim:
         for row in rows:
             for i in range(len(row)):
@@ -28,7 +28,7 @@ def format_table(table_name, corpus_tables, use_instance: bool, corpus_markdowns
                     # 500
                     row[i] = row[i][:500]
 
-    cols = corpus_tables[table_name]["column_names_original"]
+    cols = corpus_tables[table_name]["column_names"]
 
     if corpus_markdowns is None:
         df = pd.DataFrame(rows, columns=cols)
@@ -42,7 +42,7 @@ def format_table(table_name, corpus_tables, use_instance: bool, corpus_markdowns
     table_string.append(f"Example table content:\n{df_md}")
 
     if use_instance:
-        instances = corpus_tables[table_name]["instances"]
+        instances = corpus_tables[table_name]["example_columns"]
         table_string.append(f"Top-10 most occurring values for each column:")
         for col_idx, col_name in enumerate(cols):
             _instance = " | ".join([str(x) for x in instances[col_idx]])

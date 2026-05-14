@@ -53,10 +53,10 @@ def get_tables(path_db):
 
 def get_tables_from_tables_json(db_id, tables_json):
     for db in tables_json:
-        if db["db_id"] != db_id: continue
+        if db["db"] != db_id: continue
 
         table_names = db["table_names_original"]
-        columns = db["column_names_original"]
+        columns = db["column_names"]
         primary_keys = db["primary_keys"]
         foreign_keys = db["foreign_keys"]
         
@@ -226,7 +226,7 @@ def get_sample_rows_for_database_from_tables_json(db_id, tables_json):
 
     md_rows = ''
     for db in tables_json:
-        if db["db_id"] not in db_id: continue
+        if db["db"] not in db_id: continue
         sample_rows = db["sample_rows"]
         md_rows += to_markdown(sample_rows)
 
@@ -245,10 +245,10 @@ def get_sql_for_database_from_tables_json(db_id, tables_json, use_column_desc=Fa
         raise ValueError(f"db_id should be str or list, not {type(db_id)}")
 
     for db in tables_json:
-        if db["db_id"] not in GT_dbs: continue
+        if db["db"] not in GT_dbs: continue
        
         table_names = db["table_names_original"]
-        columns = db["column_names_original"]
+        columns = db["column_names"]
         column_types = db["column_types"]
         column_descs = db["column_descriptions"]
         primary_keys = db["primary_keys"]
@@ -344,10 +344,10 @@ def get_sql_for_database_from_tables_json_filtered(db_id, tables_json, gold_tabl
         raise ValueError(f"db_id should be str or list, not {type(db_id)}")
 
     for db in tables_json:
-        if db["db_id"] not in GT_dbs: continue
+        if db["db"] not in GT_dbs: continue
        
         table_names = db["table_names_original"]
-        columns = db["column_names_original"]
+        columns = db["column_names"]
         column_types = db["column_types"]
         column_descs = db["column_descriptions"]
         primary_keys = db["primary_keys"]
@@ -483,7 +483,7 @@ def get_sample_rows_for_database_from_tables_json_filtered(db_id, tables_json, g
 
     md_rows = ''
     for db in tables_json:
-        if db["db_id"] not in db_id: continue
+        if db["db"] not in db_id: continue
         sample_rows = db["sample_rows"]
         
         # Filter sample rows if gold_table_names provided
@@ -650,7 +650,7 @@ def sql2skeleton(sql: str, db_schema):
         for table_id, table_name_original in enumerate(db_schema["table_names_original"]):
             table_names_original.append(table_name_original.lower())
             table_dot_column_names_original.append(table_name_original + ".*")
-            for column_id_and_name in db_schema["column_names_original"]:
+            for column_id_and_name in db_schema["column_names"]:
                 column_id = column_id_and_name[0]
                 column_name_original = column_id_and_name[1]
                 table_dot_column_names_original.append(table_name_original.lower() + "." + column_name_original.lower())

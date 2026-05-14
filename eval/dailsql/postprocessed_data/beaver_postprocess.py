@@ -212,7 +212,7 @@ def main_postprocess(root_path, dev_json, mysql_credential_path, option, tables_
             # Beaver format
             for table_key, table_info in tables_data.items():
                 if 'table_name_original' in table_info:
-                    schema_tables.append(table_info['table_name_original'])
+                    schema_tables.append(table_info['table_name'])
                 else:
                      schema_tables.append(table_key)
         
@@ -242,7 +242,7 @@ def main_postprocess(root_path, dev_json, mysql_credential_path, option, tables_
     error_count = 0
     
     for idx, item in enumerate(dev_data):
-        instance_id = item['instance_id']
+        instance_id = item['id']
         print(f"\n[{idx+1}/{len(dev_data)}] Processing {instance_id}...")
         
         # Create output directory for this instance

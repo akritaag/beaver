@@ -55,17 +55,20 @@ def get_mysql_credentials(db_id, creds_path=None):
     host = os.environ.get("MYSQL_HOST")
     user = os.environ.get("MYSQL_USER")
     password = os.environ.get("MYSQL_PASSWORD")
+    database = db_id
     if db_id == "neutron":
         database = "csail_stata_neutron"
     elif db_id == "nova":
         database = "csail_stata_nova"
+    elif db_id == "dw_real":
+        database = "dw"
     
     if host and user and password:
         return {
             "host": host,
             "user": user,
             "password": password,
-            "database": db_id
+            "database": database
         }
     
     return None
@@ -236,7 +239,7 @@ def evaluate_beaver_results(beaver_questions_path, output_dir, mysql_creds_path,
 
     # Infer db_id from data if not provided
     if not db_id and beaver_data:
-        db_id = beaver_data[0].get("db_id", "dw")
+        db_id = beaver_data[0].get("db", "dw")
 
     # Load MySQL credentials
     mysql_creds = get_mysql_credentials(db_id, mysql_creds_path)
@@ -259,7 +262,7 @@ def evaluate_beaver_results(beaver_questions_path, output_dir, mysql_creds_path,
 
     for idx, item in enumerate(beaver_data):
         # Use the instance_id from the data file if available, otherwise construct it
-        instance_id = item.get("instance_id", f"beaver_{item['db_id']}_{idx:03d}")
+        instance_id = item.get("id", f"beaver_{item['db']}_{idx:03d}")
         result_dir = os.path.join(output_dir, instance_id)
         result_csv_path = os.path.join(result_dir, "result.csv")
 

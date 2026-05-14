@@ -8,11 +8,12 @@ import sys
 
 # Add the eval directory to path to import unified_utils
 sys.path.append(os.path.dirname(__file__))
-from unified_utils import compare_results
+from unified_utils import get_mysql_credentials, execute_sql_with_timeout, compare_results
 
 def main():
     parser = argparse.ArgumentParser(description="Unified evaluation script for text-to-SQL baselines")
     parser.add_argument("--unified_dir", type=str, required=True, help="Path to the unified output directory containing generated/ and gold/ subdirectories")
+    parser.add_argument("--dataset", type=str, required=True, help="Dataset name for MySQL credentials, e.g. dw")
     args = parser.parse_args()
     
     args.unified_dir = args.unified_dir.rstrip('/')
@@ -23,7 +24,12 @@ def main():
         print(f"Error: Could not find 'generated' or 'gold' directories inside {args.unified_dir}")
         sys.exit(1)
         
-    gold_files = glob.glob(os.path.join(gold_dir, "*.csv"))
+    mysql_creds = get_mysql_credentials(args.dataset)
+    if not mysql_creds:
+        print(f"Error: Could not load MySQL credentials for dataset {args.dataset}")
+        sys.exit(1)
+        
+    gold_files = sorted(glob.glob(os.path.join(gold_dir, "*.sql")))
     
     total_queries = len(gold_files)
     total_attempted = total_queries
@@ -36,19 +42,32 @@ def main():
     
     print(f"Evaluating {total_queries} queries from {args.unified_dir}...")
     
-    for gold_csv_path in tqdm(gold_files):
-        filename = os.path.basename(gold_csv_path)
-        pred_csv_path = os.path.join(generated_dir, filename)
+    for gold_sql_path in tqdm(gold_files):
+        filename = os.path.basename(gold_sql_path)
+        base_name = filename.replace(".sql", "")
+        pred_sql_path = os.path.join(generated_dir, filename)
         
-        # Load DataFrames
-        try:
-            gold_df = pd.read_csv(gold_csv_path)
-        except Exception:
-            gold_df = pd.DataFrame()
+        # 1. Execute Gold SQL
+        with open(gold_sql_path, "r") as f:
+            gold_sql = f.read().strip()
+        
+        gold_df, gold_err = execute_sql_with_timeout(gold_sql, mysql_creds)
+        if gold_df is None:
+            gold_df = pd.DataFrame() # Treat error as empty for comparison? 
+            # Actually, usually if gold fails, it's a gold_execution_failed
             
-        try:
-            pred_df = pd.read_csv(pred_csv_path)
-        except Exception:
+        # 2. Execute Predicted SQL
+        pred_sql = ""
+        if os.path.exists(pred_sql_path):
+            with open(pred_sql_path, "r") as f:
+                pred_sql = f.read().strip()
+        
+        pred_df = None
+        pred_err = None
+        if pred_sql:
+            pred_df, pred_err = execute_sql_with_timeout(pred_sql, mysql_creds)
+            
+        if pred_df is None:
             pred_df = pd.DataFrame()
             
         # Compare
@@ -68,7 +87,9 @@ def main():
             "score": score,
             "message": msg,
             "gold_empty": gold_is_empty,
-            "pred_empty": pred_df.empty
+            "pred_empty": pred_df.empty,
+            "gold_error": gold_err,
+            "pred_error": pred_err
         })
         
     print("\n" + "=" * 80)

@@ -136,12 +136,12 @@ def evaluate_single_entry(subdir_path, gold_data, chat_client, output_base_dir):
         gold_entry = gold_data[index]
         
         # Gold Standards
-        gold_tables = gold_entry.get("gold_tables", [])
+        gold_tables = gold_entry.get("tables", [])
         
         # Flatten mapping dict
         gold_columns = []
         if "mapping" in gold_entry:
-            for k, v in gold_entry["mapping"].items():
+            for k, v in gold_entry["column_mapping"].items():
                 gold_columns.extend(v)
                 
         # Flatten join_keys list of lists -> list of strings "A=B"
@@ -156,8 +156,7 @@ def evaluate_single_entry(subdir_path, gold_data, chat_client, output_base_dir):
 
         # Domain knowledge: evidence lists
         gold_predicates = []
-        gold_predicates.extend(extract_predicates_from_evidence(gold_entry.get("internal_evidence", [])))
-        gold_predicates.extend(extract_predicates_from_evidence(gold_entry.get("external_evidence", [])))
+        gold_predicates.extend(extract_predicates_from_evidence(gold_entry.get("domain_knowledge", [])))
 
         # Read Generated SQL
         result_sql_path = os.path.join(subdir_path, "result.sql")

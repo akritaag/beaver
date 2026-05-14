@@ -241,7 +241,7 @@ def get_exec_output(
 
 def get_sqls(result, select_number, db_dir, instance_id):
     p_sqls = []
-    db_id = result['db_id']
+    db_id = result['db']
 
     # Collect p_sqls up to select_number
     for i, x in enumerate(result['p_sqls']):

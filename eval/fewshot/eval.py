@@ -211,7 +211,7 @@ def evaluate_predictions(output_dir, gold_path, mysql_creds_path, tables_path=No
     # Load MySQL credentials
     fallback_dataset_name = dataset if dataset else "unknown"
     if gold_data and isinstance(gold_data, list) and len(gold_data) > 0:
-        db_id = gold_data[0].get("db_id", "unknown")
+        db_id = gold_data[0].get("db", "unknown")
         if fallback_dataset_name == "unknown":
             fallback_dataset_name = db_id
 
@@ -245,7 +245,7 @@ def evaluate_predictions(output_dir, gold_path, mysql_creds_path, tables_path=No
     # Determine DB ID and load schema tables if available
     db_id = "unknown"
     if gold_data and isinstance(gold_data, list) and len(gold_data) > 0:
-        db_id = gold_data[0].get("db_id", "unknown")
+        db_id = gold_data[0].get("db", "unknown")
     
     if not tables_path:
         # Try to infer it from gold_path
@@ -268,7 +268,7 @@ def evaluate_predictions(output_dir, gold_path, mysql_creds_path, tables_path=No
             # Beaver format: dict of tables
             for table_key, table_info in tables_data.items():
                 if 'table_name_original' in table_info:
-                    schema_tables.append(table_info['table_name_original'])
+                    schema_tables.append(table_info['table_name'])
                 else:
                      schema_tables.append(table_key)
         
@@ -295,8 +295,8 @@ def evaluate_predictions(output_dir, gold_path, mysql_creds_path, tables_path=No
         gold_sql = robust_clean_gold_sql(gold_sql, schema_tables)
 
         fallback_dataset_name = dataset if dataset else db_id
-        instance_id = gold_item.get("instance_id", f"beaver_{fallback_dataset_name}_{idx:03d}")
-        source_file = gold_item.get("source_file", "unknown")
+        instance_id = gold_item.get("id", f"beaver_{fallback_dataset_name}_{idx:03d}")
+        source_file = gold_item.get("detailed_category", "unknown")
 
         if source_file not in source_stats:
             source_stats[source_file] = {"total": 0, "correct": 0}
@@ -405,7 +405,7 @@ def evaluate_predictions(output_dir, gold_path, mysql_creds_path, tables_path=No
     print(f"Total queries in gold: {len(gold_data)}")
     
     fallback_dataset_name = dataset if dataset else db_id
-    results_in_gold = sum(1 for idx, item in enumerate(gold_data) if os.path.exists(os.path.join(output_dir, item.get("instance_id", f"beaver_{fallback_dataset_name}_{idx:03d}"), "predicted_0.sql")))
+    results_in_gold = sum(1 for idx, item in enumerate(gold_data) if os.path.exists(os.path.join(output_dir, item.get("id", f"beaver_{fallback_dataset_name}_{idx:03d}"), "predicted_0.sql")))
     print(
         f"Results generated: {results_in_gold}"
         f" ({results_in_gold/len(gold_data)*100:.1f}%)"
