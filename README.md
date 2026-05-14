@@ -24,11 +24,20 @@ This repository contains the datasets and evaluation for the **Beaver** text-to-
 
 ## Data Preparation
 
-For each database (e.g., `dw`), you will need to download the necessary data files from [here](https://drive.google.com/drive/folders/1xV4Wxk_AuE8gx-Q678mas7zChrAQliof?usp=sharing) into their respective folders (e.g., `data/dw/`).
+You can download the dataset directly from Hugging Face using the provided script:
+
+```bash
+cd beaver/data
+python download_hf.py
+```
+
+This script will download the `dev.json` and `dev_tables.json` files for all splits (`dw`, `nova`, `neutron`, `dw_real`) from Hugging Face and generate a small `dev_sampled.json` subset for each.
+
+Alternatively, you can manually download the necessary data files from [here](https://drive.google.com/drive/folders/1xV4Wxk_AuE8gx-Q678mas7zChrAQliof?usp=sharing) into their respective folders (e.g., `data/dw/`).
 Ensure the following files are present:
 - `dev.json`: The main dataset questions file.
 - `dev_tables.json`: The tables and schema metadata.
-- `top_tables.json`: The table retrieval rankings.
+- `reranked_preds.json`: The table retrieval rankings (used to generate `dev_sampled.json`).
 - `example.json`: Few-shot examples.
 
 You also need to setup the MySQL databases by importing the dump files which can be downloaded from [here](https://drive.google.com/drive/folders/19bRoRxgWQLcJN3LTxwgev0xTahunjPIR?usp=drive_link). A free MySQL installation can be found [here](https://dev.mysql.com/downloads/mysql/). After the installation, import the MySQL dump files using

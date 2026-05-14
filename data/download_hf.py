@@ -108,9 +108,9 @@ def main():
                 item = processed_queries[idx]
                 # If reranked_preds exists, add top_k_tables
                 if reranked_preds:
-                    # Logic from sample.py: cur_pred[:15]
-                    # Note: reranked_preds keys are strings of indices
-                    preds = reranked_preds.get(str(idx), [])
+                    # Use the full id directly after migration
+                    item_id = item.get("id", "")
+                    preds = reranked_preds.get(item_id, [])
                     item["top_k_tables"] = preds[:15]
                 sampled_data_with_preds.append(item)
             

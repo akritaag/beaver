@@ -160,13 +160,13 @@ cython_debug/
 #.idea/
 
 .DS_Store
-data/dw/
-data/dw_real/
-data/sp/
-data/sp_real/
-data/sp_easy/
-data/nova/
-data/neutron/
+data/dw/*
+data/dw_real/*
+data/sp/*
+data/sp_real/*
+data/sp_easy/*
+data/nova/*
+data/neutron/*
 
 
 eval/ReFoRCE/output/
@@ -186,5 +186,10 @@ eval/dailsql/output
 eval/fewshot/output
 
 eval/output/
+
+!data/dw/reranked_preds.json
+!data/dw_real/reranked_preds.json
+!data/nova/reranked_preds.json
+!data/neutron/reranked_preds.json
 
 .vscode/
