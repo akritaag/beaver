@@ -64,7 +64,10 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
         if db_id not in db_schemas:
             db_schemas[db_id] = {
                 'db_id': db_id,
+                'db': db_id,
+                'table_names': [],
                 'table_names_original': [],
+                'column_names': [],
                 'column_names_original': [],
                 'column_types': [],
                 'foreign_keys': [],
@@ -78,10 +81,12 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
         table_idx = len(schema['table_names_original'])
         
         # Add table name
+        schema['table_names'].append(table_name)
         schema['table_names_original'].append(table_name)
         
         # Add wildcard column for the table
         schema['column_names'].append([-1, '*'])
+        schema['column_names_original'].append([-1, '*'])
         schema['column_types'].append('text')
         
         # Add columns
@@ -89,6 +94,7 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
             if split in ["neutron", "nova", "csail_stata_neutron", "csail_stata_nova"]:
                 col_name = col_name.lower()
             schema['column_names'].append([table_idx, col_name])
+            schema['column_names_original'].append([table_idx, col_name])
             schema['column_types'].append(col_type)
         
         # Add primary key (if exists)
@@ -130,6 +136,13 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
                                 target_table_idx = i
                                 break
                     
+                    source_idx = None
+                    for idx, (tbl_idx, col_name) in enumerate(schema['column_names']):
+                        if tbl_idx == table_idx and col_name == source_col:
+                            source_idx = idx
+                            break
+                    
+                    target_idx = None
                     if target_table_idx is not None:
                         for idx, (tbl_idx, col_name) in enumerate(schema['column_names']):
                             if tbl_idx == target_table_idx and col_name == target_col:
@@ -138,32 +151,6 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
                     
                     if source_idx is not None and target_idx is not None:
                         schema['foreign_keys'].append([source_idx, target_idx])
-
-
-                    elif split in ["sp", "neutron", "nova", "csail_stata_neutron", "csail_stata_nova"]:
-
-                    
-                        # Case insensitive lookup for target table
-                        target_table_idx = None
-                        target_idx = None
-                        try:
-                            # Try exact match first
-                            target_table_idx = schema['table_names_original'].index(target_table)
-                        except ValueError:
-                            # Try case insensitive match
-                            for i, name in enumerate(schema['table_names_original']):
-                                if name.lower() == target_table.lower():
-                                    target_table_idx = i
-                                    break
-                        
-                        if target_table_idx is not None:
-                            for idx, (tbl_idx, col_name) in enumerate(schema['column_names']):
-                                if tbl_idx == target_table_idx and col_name == target_col:
-                                    target_idx = idx
-                                    break
-                        
-                        if source_idx is not None and target_idx is not None:
-                            schema['foreign_keys'].append([source_idx, target_idx])
     
     # Convert to list format
     dinsql_format = list(db_schemas.values())
@@ -232,20 +219,11 @@ def convert_beaver_questions_to_dinsql_format(beaver_questions_path, output_path
     
     dinsql_format = []
     for idx, question_info in enumerate(beaver_questions):
-        if question_info['db'] == 'dw':
-            base_item = {
-            'id': f'beaver_dw_{idx:03d}',
+        base_item = {
+            'id': question_info['id'],
             'question': question_info['question'],
             'db': question_info['db'],
             'gold_sql': question_info.get('sql', ''),
-            # 'gold_sql': question_info.get('sql', '').upper(),
-        }
-        else:
-            base_item = {
-                'id': f'beaver_dw_{idx:03d}',
-                'question': question_info['question'],
-                'db': question_info['db'],
-                'gold_sql': question_info.get('sql', ''),
         }
         
         # Option 1+: Store gold_tables for filtering

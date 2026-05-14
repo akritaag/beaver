@@ -31,33 +31,49 @@ def main():
     with open(args.gold_file, 'r') as f:
         gold_data = json.load(f)
         
+    # Create ID mapping for efficient lookup
+    id_to_entry = {entry['id']: entry for entry in gold_data}
+    
     subdirs = sorted(glob.glob(os.path.join(args.input_dir, "*")))
     subdirs = [d for d in subdirs if os.path.isdir(d)]
     
     print(f"Processing {len(subdirs)} subdirectories for {baseline_name}...")
     for subdir_path in tqdm(subdirs):
         subdir_name = os.path.basename(subdir_path)
-        match = re.search(r'_(\d+)$', subdir_name)
-        if not match: continue
         
-        idx = int(match.group(1))
-        if idx >= len(gold_data): continue
+        # Use ID-based lookup
+        if subdir_name in id_to_entry:
+            gold_entry = id_to_entry[subdir_name]
+        else:
+            # Fallback for index-based directory names (e.g., ends in _001)
+            match = re.search(r'_(\d+)$', subdir_name)
+            if match:
+                idx = int(match.group(1))
+                if idx < len(gold_data):
+                    gold_entry = gold_data[idx]
+                else:
+                    continue
+            else:
+                continue
         
-        gold_entry = gold_data[idx]
+        real_id = gold_entry['id']
         gold_sql = gold_entry.get("sql", gold_entry.get("oracle_sql", gold_entry.get("gold_sql", "")))
         
         # 1. Save Gold SQL
-        gold_sql_path = os.path.join(gold_dir, f"{args.dataset}_{idx}.sql")
+        gold_sql_path = os.path.join(gold_dir, f"{real_id}.sql")
         with open(gold_sql_path, "w") as f:
             f.write(gold_sql)
             
         # 2. Save Generated SQL
-        pred_sql_path = os.path.join(generated_dir, f"{args.dataset}_{idx}.sql")
+        pred_sql_path = os.path.join(generated_dir, f"{real_id}.sql")
         
+        # Look for SQL result file in the subdirectory
         result_sql_path = os.path.join(subdir_path, "result.sql")
         if not os.path.exists(result_sql_path):
+            # Check for other .sql files in the subdirectory
             sql_files = glob.glob(os.path.join(subdir_path, "*.sql"))
             if sql_files:
+                # Use the first .sql file found (common in some baselines like DIN-SQL)
                 result_sql_path = sql_files[0]
                 
         pred_sql = ""

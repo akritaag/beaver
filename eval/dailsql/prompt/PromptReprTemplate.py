@@ -47,7 +47,7 @@ class SQLPrompt(BasicPrompt):
         tables_json = json.load(open(osp.join(proj_dir, f'preprocessed_data/{args.dev}/tables_preprocessed.json'), 'r', encoding='utf-8'))
         
         # Use per-question gold tables if available (Option 2+), otherwise use all tables
-        gold_tables = example.get('tables', []) if hasattr(args, 'dev') else []
+        gold_tables = example.get('gold_tables', []) if hasattr(args, 'dev') else []
         
         if gold_tables:
             # Option 2+: Use only gold tables for this question
@@ -71,7 +71,7 @@ class SQLPrompt(BasicPrompt):
             dialect1, dialect2 = 'Goole_BigQuery', "Goole BigQuery. Don't apply `your_project.your_dataset` prefix to table names, I will fix this issue later"
         elif example['id'].startswith('sf'):
             dialect1, dialect2 = 'Snowflake', 'Snowflake. Column names must be enclosed in double quotes, and table names must not be enclosed'
-        elif example['id'].startswith('beaver'):
+        elif any(example['id'].startswith(prefix) for prefix in ['beaver', 'dw', 'sp', 'nova', 'neutron']):
             dialect1, dialect2 = 'MySQL', 'MySQL'
         else:
             raise NotImplementedError

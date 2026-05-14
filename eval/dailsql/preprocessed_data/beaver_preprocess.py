@@ -53,6 +53,7 @@ def convert_beaver_tables_to_dailsql_format(beaver_tables_path, output_path, gol
         if db_id not in db_schemas:
             db_schemas[db_id] = {
                 'db_id': db_id,
+                'db': db_id,
                 'table_names': [],  # DAILSQL needs this
                 'table_names_original': [],
                 'column_names': [],  # DAILSQL needs this
@@ -72,9 +73,10 @@ def convert_beaver_tables_to_dailsql_format(beaver_tables_path, output_path, gol
         
         # Add wildcard column only once at the start
         if len(schema['table_names_original']) == 0:
-            schema['column_names'].append([-1, '*'])  # One wildcard for entire schema
             schema['column_names'].append([-1, '*'])
+            schema['column_names_original'].append([-1, '*'])
             schema['column_types'].append('text')
+            schema['column_descriptions'][0] = [-1, '']
         
         table_idx = len(schema['table_names_original'])
         
@@ -87,21 +89,27 @@ def convert_beaver_tables_to_dailsql_format(beaver_tables_path, output_path, gol
         for col_name, col_type in zip(table_info['column_names'], table_info['column_types']):
             if split in ["neutron", "nova", "csail_stata_neutron", "csail_stata_nova"]:
                 col_name = col_name.lower()
-            schema['column_names'].append([table_idx, col_name])  # DAILSQL needs this
             schema['column_names'].append([table_idx, col_name])
+            schema['column_names_original'].append([table_idx, col_name])
             schema['column_types'].append(col_type)
             # Add empty column description in correct format [table_idx, '']
             schema['column_descriptions'][len(schema['column_names']) - 1] = [table_idx, '']
             schema['db_stats']['No. of columns'] += 1
         
         # Add sample rows if available
-        if 'rows' in table_info and table_info['example_rows']:
+        if 'example_rows' in table_info and table_info['example_rows']:
             # Convert rows to dict format expected by DAILSQL
             rows_data = []
             col_names = table_info['column_names']
             for row in table_info['example_rows'][:3]:  # Limit to 3 rows
                 if isinstance(row, list):
-                    row_dict = {col_names[i]: row[i] for i in range(min(len(col_names), len(row)))}
+                    row_dict = {}
+                    for i in range(min(len(col_names), len(row))):
+                        val = row[i]
+                        # Handle NaN values
+                        if isinstance(val, float) and (val != val):
+                            val = None
+                        row_dict[col_names[i]] = val
                     rows_data.append(row_dict)
             if rows_data:
                 schema['sample_rows'][table_name] = rows_data
@@ -324,15 +332,10 @@ def convert_beaver_questions_to_dailsql_format(beaver_questions_path, output_pat
         # Tokenize question
         doc = nlp(question_text)
         question_toks = [token.text for token in doc]
-        if question_info['db'] == 'dw':
-            query = question_info.get('sql', '')
-            # query = question_info.get('sql', '').upper()
-        else:
-            query = question_info.get('sql', '')
-        query = process_sql(query)
+        query = process_sql(question_info.get('sql', ''))
         
         base_item = {
-            'id': f'beaver_dw_{idx:03d}',
+            'id': question_info['id'],
             'question': question_text,
             'question_toks': question_toks,
             'db': question_info['db'],
@@ -353,14 +356,15 @@ def convert_beaver_questions_to_dailsql_format(beaver_questions_path, output_pat
             else:
                 raw_gold_tables = question_info.get('tables', [])
 
-            if question_info['db'] in ['sp', 'csail_stata_neutron', 'csail_stata_nova']:
-                base_item['tables'] = [t.split('#sep#')[1].lower() if '#sep#' in t else t.lower() for t in raw_gold_tables]
-            elif question_info['db'] == 'dw':
+            if 'dw' in question_info['db']:
                 # do not lower case for dw
-                base_item['tables'] = [table.replace('dw#sep#', '') for table in raw_gold_tables]
+                base_item['gold_tables'] = [table.replace(f"{question_info['db']}#sep#", '') for table in raw_gold_tables]
+                base_item['gold_tables'] = [table.replace('dw#sep#', '') for table in base_item['gold_tables']]
+            else:
+                base_item['gold_tables'] = [t.split('#sep#')[1].lower() if '#sep#' in t else t.lower() for t in raw_gold_tables]
         else:
             # Option None: No filtering, include all tables
-            base_item['tables'] = []
+            base_item['gold_tables'] = []
         
         # Store original data for evaluation
         if option >= 2:

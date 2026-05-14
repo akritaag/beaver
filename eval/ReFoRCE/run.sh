@@ -94,6 +94,7 @@ python run.py \
     --early_stop \
     --do_vote \
     --num_votes $NUM_VOTES \
+    --option ${OPTION} \
     --num_workers $NUM_WORKERS
 
 echo ""
@@ -122,6 +123,7 @@ python run.py \
     --early_stop \
     --do_vote \
     --num_votes $NUM_VOTES \
+    --option ${OPTION} \
     --num_workers $NUM_WORKERS \
     --rerun \
     --overwrite_unfinished
@@ -145,6 +147,7 @@ python run.py \
     --do_vote \
     --random_vote_for_tie \
     --num_votes $NUM_VOTES \
+    --option ${OPTION} \
     --num_workers $NUM_WORKERS
 
 echo ""
@@ -167,6 +170,7 @@ python run.py \
     --random_vote_for_tie \
     --final_choose \
     --num_votes $NUM_VOTES \
+    --option ${OPTION} \
     --num_workers $NUM_WORKERS
 
 echo ""

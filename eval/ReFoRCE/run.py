@@ -92,7 +92,7 @@ def process_sql_data(sql_data):
     search_directory = os.path.join(args.output_path, sql_data)
 
     # Create agent object
-    agent_format = REFORCE(args.db_path, sql_data, search_directory, prompt_all)
+    agent_format = REFORCE(args.db_path, sql_data, search_directory, prompt_all, option=args.option)
     
     # Create the directory if it does not exist
     if not os.path.exists(search_directory):
@@ -256,6 +256,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=16)
 
     parser.add_argument('--omnisql_format_pth', type=str, default=None)
+    parser.add_argument('--option', type=int, default=None, help="Preprocessing option (1-5)")
     parser.add_argument('--gold_result_path', type=str, default=None)
     args = parser.parse_args()
 

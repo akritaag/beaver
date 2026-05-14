@@ -397,7 +397,7 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
         
         # Create ReFoRCE entry
         reforce_entry = {
-            "id": f"beaver_{item['db']}_opt{preprocessing_option}_{idx:03d}",
+            "id": item['id'],
             "db": item['db'],
             "db_desc": db_desc
         }

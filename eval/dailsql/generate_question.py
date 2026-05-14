@@ -185,7 +185,7 @@ if __name__ == '__main__':
                                           scope_factor=args.scope_factor,
                                           cross_domain=cross_domain, 
                                           args=args)
-            question_format['id'] = question_json['id'] 
+            question_format['id'] = question_json.get('id', question_json.get('instance_id'))
             questions.append(question_format)
             token_cnt += question_format["prompt_tokens"]
         except Exception as e:

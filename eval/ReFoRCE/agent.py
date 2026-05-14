@@ -12,7 +12,7 @@ import sys
 csv.field_size_limit(sys.maxsize)
 
 class REFORCE:
-    def __init__(self, db_path, sql_data, search_directory, prompt_class: Type[Prompts], sql_env: Type[SqlEnv]=None, chat_session_pre=None, chat_session=None, log_save_path=None, db_id=None, task=None):
+    def __init__(self, db_path, sql_data, search_directory, prompt_class: Type[Prompts], sql_env: Type[SqlEnv]=None, chat_session_pre=None, chat_session=None, log_save_path=None, db_id=None, task=None, option=None):
         self.csv_save_name = "result.csv"
         self.sql_save_name = "result.sql"
         self.log_save_name = "log.log"
@@ -23,6 +23,7 @@ class REFORCE:
         self.sqlite_path = get_sqlite_path(db_path, sql_data, db_id, task)
         self.db_id = db_id
         self.instance_id = sql_data
+        self.option = option
 
         self.sql_id = log_save_path
 
@@ -173,7 +174,9 @@ class REFORCE:
         results_values = []
         results_tables = []
 
-        if "_opt" in self.instance_id:
+        if self.option is not None:
+            preprocessing_option = self.option
+        elif "_opt" in self.instance_id:
             try:
                 preprocessing_option = int(self.instance_id.split("_opt")[1].split("_")[0])
             except:
@@ -275,7 +278,9 @@ class REFORCE:
         print(f"{self.sql_id}: chat_session len: {self.chat_session.get_message_len()}")
 
     def gen(self, args, logger, question, format_csv, table_struct, table_info, response_pre_txt, pre_info, csv_save_path, sql_save_path, task=None):
-        if "_opt" in self.instance_id:
+        if self.option is not None:
+            preprocessing_option = self.option
+        elif "_opt" in self.instance_id:
             try:
                 preprocessing_option = int(self.instance_id.split("_opt")[1].split("_")[0])
             except:

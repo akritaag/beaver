@@ -19,7 +19,7 @@ def process_batch(batch, submit_folder, db_ids, args, i,
     """Function to process each batch in parallel."""
 
     # Setup logging for this batch
-    instance_id = batch['id'][0]
+    instance_id = batch['instance_id'][0]
     instance_dir = os.path.join(submit_folder, instance_id)
     os.makedirs(instance_dir, exist_ok=True)
     log_file = os.path.join(instance_dir, "generate.log")
@@ -37,7 +37,7 @@ def process_batch(batch, submit_folder, db_ids, args, i,
 
     # cost recorded
     os.makedirs(os.path.join(submit_folder, "../cost"), exist_ok=True)
-    with open(os.path.join(submit_folder, "../cost", f"{batch['id'][0]}.json"), "w") as submit_file:
+    with open(os.path.join(submit_folder, "../cost", f"{batch['instance_id'][0]}.json"), "w") as submit_file:
         prompt = batch["prompt"][0]
         prompt_tokens = len(tiktoken.get_encoding("cl100k_base").encode(prompt))
         logger.info(f"[Prompt Tokens]: {prompt_tokens}")
@@ -58,7 +58,7 @@ def process_batch(batch, submit_folder, db_ids, args, i,
     if args.post_mode == 'consistency-from-generated-pass@n':  # load the saved sql from the output of pass@n
         cur_db_ids = db_ids[i * args.batch_size: (i+1) * args.batch_size]
         results = []
-        for db_id, instance_id in zip(cur_db_ids, batch["id"]):
+        for db_id, instance_id in zip(cur_db_ids, batch["instance_id"]):
             result = {
                 'db_id': db_id,
                 'p_sqls': [],
@@ -89,7 +89,7 @@ def process_batch(batch, submit_folder, db_ids, args, i,
     if args.n == 1: 
         assert len(res["response"]) == args.batch_size == 1
         sql = res["response"][0][0]
-        instance_id = batch["id"][0]
+        instance_id = batch["instance_id"][0]
         logger.info(f"[Raw SQL Response]\n{sql}\n[End Raw SQL Response]")
         sql = " ".join(sql.replace("\n", " ").split())
         sql = process_duplication(sql)
@@ -99,7 +99,7 @@ def process_batch(batch, submit_folder, db_ids, args, i,
     else:
         results = []
         cur_db_ids = db_ids[i * args.batch_size: (i+1) * args.batch_size]
-        for sqls, db_id, instance_id in zip(res["response"], cur_db_ids, batch["id"]):  # dummy loop, only excute once
+        for sqls, db_id, instance_id in zip(res["response"], cur_db_ids, batch["instance_id"]):  # dummy loop, only excute once
             logger.info(f"[Generated {len(sqls)} SQL Candidates]")
             processed_sqls = []
             for candidate_idx, sql in enumerate(sqls):
@@ -171,10 +171,10 @@ if __name__ == '__main__':
         pred_ids = [file.split(".")[0].split("@")[0] for file in os.listdir(submit_folder) if file.endswith(".sql")]
         pred_ids = set(pred_ids)
     questions_json = json.load(open(os.path.join(args.question, QUESTION_FILE), "r"))
-    questions = [{"prompt": item["prompt"], "instance_id": item["id"]} for item in questions_json["questions"] \
-        if item["id"] not in pred_ids]
-    db_ids = [item["db"] for item in questions_json["questions"] \
-        if item["id"] not in pred_ids]
+    questions = [{"prompt": item["prompt"], "instance_id": item.get("id", item.get("instance_id"))} for item in questions_json["questions"] \
+        if item.get("id", item.get("instance_id")) not in pred_ids]
+    db_ids = [item.get("db", item.get("db_id")) for item in questions_json["questions"] \
+        if item.get("id", item.get("instance_id")) not in pred_ids]
 
     question_loader = DataLoader(questions, batch_size=args.batch_size, shuffle=False, drop_last=False)
 

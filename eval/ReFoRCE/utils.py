@@ -170,7 +170,7 @@ def get_api_name(sql_data):
         return "sqlite"
     elif sql_data.startswith("bq") or sql_data.startswith("ga"):
         return "bigquery"
-    elif sql_data.startswith("beaver"):
+    elif any(sql_data.startswith(prefix) for prefix in ["beaver", "dw", "sp", "nova", "neutron"]):
         return "mysql"
     else:
         raise NotImplementedError("Invalid file name.")
