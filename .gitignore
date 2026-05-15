@@ -187,9 +187,13 @@ eval/fewshot/output
 
 eval/output/
 
+!data/dw/example.json
 !data/dw/reranked_preds.json
+!data/dw_real/example.json
 !data/dw_real/reranked_preds.json
+!data/nova/example.json
 !data/nova/reranked_preds.json
+!data/neutron/example.json
 !data/neutron/reranked_preds.json
 
 .vscode/
