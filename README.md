@@ -22,41 +22,9 @@ This repository contains the datasets and evaluation for the **Beaver** text-to-
     └── evaluate_extraction.py           # Script for evaluating other subtasks
 ```
 
-## Data Preparation
+## Getting Started
 
-You can download the dataset directly from Hugging Face using the provided script:
-
-```bash
-cd beaver/data
-python download_hf.py
-```
-
-This script will download the `dev.json` and `dev_tables.json` files for all splits (`dw`, `nova`, `neutron`, `dw_real`) from Hugging Face and generate a small `dev_sampled.json` subset for each.
-
-Alternatively, you can manually download the necessary data files from [here](https://drive.google.com/drive/folders/1xV4Wxk_AuE8gx-Q678mas7zChrAQliof?usp=sharing) into their respective folders (e.g., `data/dw/`).
-Ensure the following files are present:
-- `dev.json`: The main dataset questions file.
-- `dev_tables.json`: The tables and schema metadata.
-- `reranked_preds.json`: The table retrieval rankings (used to generate `dev_sampled.json`).
-- `example.json`: Few-shot examples.
-
-You also need to setup the MySQL databases by importing the dump files which can be downloaded from [here](https://drive.google.com/drive/folders/19bRoRxgWQLcJN3LTxwgev0xTahunjPIR?usp=drive_link). A free MySQL installation can be found [here](https://dev.mysql.com/downloads/mysql/). After the installation, import the MySQL dump files using
-
-```
-mysql -u root -p < `xxx.sql`
-```
-
-<!-- - `sample.py`: A utility script. -->
-
-<!-- *(Optional)*: If you want to run evaluations on a smaller, sampled subset, you can execute the `sample.py` script to generate a sampled split for that dataset: -->
-<!-- ```bash
-cd data/neutron
-python sample.py
-``` -->
-
-## Environment Setup
-
-**Credentials (`.env` file)**
+### Credentials (`.env` file)
 
 All API keys and MySQL credentials are managed through a single `eval/.env` file.
 
@@ -73,7 +41,52 @@ MYSQL_USER=root
 MYSQL_PASSWORD=xxx
 ```
 
-**Text-to-SQL methods**
+### Data Pre-processing
+You can download the dataset directly from Hugging Face using the provided script:
+
+```bash
+python data/download_hf.py --sample [sample_size]
+```
+
+For each of the four splits (`dw`, `nova`, `neutron`, `dw_real`), this script generates the following additional files
+* `dev.json`: The main dataset questions file.
+* `dev_tables.json`: The tables and schema metadata.
+* `dev_sampled.json`: running on the entire dataset could be very expensive, therefore, we the subset (by default `sample_size=100`) we use for testing
+
+<!-- Alternatively, you can manually download the necessary data files from [here](https://drive.google.com/drive/folders/1xV4Wxk_AuE8gx-Q678mas7zChrAQliof?usp=sharing) into their respective folders (e.g., `data/dw/`). -->
+<!-- Ensure the following files are present: -->
+<!-- - `dev.json`:  -->
+<!-- - `dev_tables.json`:  -->
+<!-- - `reranked_preds.json`: The table retrieval rankings (used to generate `dev_sampled.json`). -->
+<!-- - `example.json`: Few-shot examples. -->
+
+You should also follow the instruction [here](https://huggingface.co/datasets/beaverbench/beaver-table#getting-started) to setup the MySQL database.
+
+<!-- - `sample.py`: A utility script. -->
+
+<!-- *(Optional)*: If you want to run evaluations on a smaller, sampled subset, you can execute the `sample.py` script to generate a sampled split for that dataset: -->
+<!-- ```bash
+cd data/neutron
+python sample.py
+``` -->
+
+### Table retrieval
+We adopt a retrieve-then-rerank pipeline to 
+
+```
+python retrieve.py --embedding_model xxx --reranker_model xxx --k xxx
+```
+
+* `dataset`: one of `dw`, `dw_real`, `neutron`, `nova`
+* `embedding_model` (default): 
+* `embed_k`: used for embedding to determine the number of tables to retrieve, default `50`
+* `reranker_model`: default `Qwen/Qwen3-Reranker-8B`, so no 
+* `rerank_k`: default `15`, so no 
+These tables will then be provided to different text-to-SQL methods to generate the final output.
+* if both embedding + reranking, then `rerank_k` tables will be provided
+* if only embedding, then `embed_k` tables will be provided
+
+## Text-to-SQL methods
 
 Each method has its own dependencies and environment requirements. You can manage these environments using either `conda` or `venv`.
 
@@ -152,7 +165,8 @@ pip install -r requirements.txt
 <!-- The database name is automatically determined from the `--dataset` argument — no need to create separate credential files per database. -->
 
 
-## Execution accuracy evaluation
+## Evaluation
+### Execution accuracy evaluation
 
 <!-- In the paper, we define five subtasks: multi-table retrieval, join key detection, column mapping, domain knowledge extraction, and query decomposition. We also provide annotations for these subtasks. We provide three settings of providing these annotations as oracle hints. -->
 
@@ -181,7 +195,7 @@ python unified_evaluation.py --unified_dir output/unified/<baseline>/<run_name>
 
 For details on subtasks, please refer to the paper.
 
-## Subtask evaluation
+### Subtask evaluation
 
 Beyond standard execution accuracy (exact match), we also provide fine-grained evaluation on the subtasks. These scripts analyze the outputs generated by the methods above, so you need to first execute `run.sh` before you can obtain the subtask performance.
 
