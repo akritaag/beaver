@@ -1,3 +1,4 @@
+import argparse
 import os
 import json
 import random
@@ -16,6 +17,11 @@ def parse_if_string(val, default_type=list):
     return val if val is not None else default_type()
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sample", default="100")
+    args = parser.parse_args()
+    sample_size = int(args.sample)
+
     print("Loading datasets from Hugging Face...")
     try:
         query_ds = load_dataset('beaverbench/beaver-query')
@@ -24,7 +30,7 @@ def main():
         print(f"Error loading datasets: {e}")
         return
 
-    base_data_dir = "."
+    base_data_dir = "./data"
     os.makedirs(base_data_dir, exist_ok=True)
 
     splits = query_ds.keys()
@@ -94,7 +100,7 @@ def main():
         if len(processed_queries) > 0:
             random.seed(77)
             indices = list(range(len(processed_queries)))
-            sample_size = min(5, len(processed_queries))
+            sample_size = min(sample_size, len(processed_queries))
             sampled_indices = random.sample(indices, sample_size)
             
             # Load reranked_preds if restored
@@ -111,15 +117,16 @@ def main():
                     # Use the full id directly after migration
                     item_id = item.get("id", "")
                     preds = reranked_preds.get(item_id, [])
+                    # retrieve top-15 tables
                     item["top_k_tables"] = preds[:15]
                 sampled_data_with_preds.append(item)
             
             sample_path = os.path.join(split_dir, "dev_sampled.json")
             save_json(sampled_data_with_preds, sample_path)
             
-            indices_path = os.path.join(split_dir, "dev_sampled_indices.json")
-            save_json(sampled_indices, indices_path)
-            print(f"Sampled {sample_size} queries to {sample_path} (Indices saved to {indices_path})")
+            # indices_path = os.path.join(split_dir, "dev_sampled_indices.json")
+            # save_json(sampled_indices, indices_path)
+            print(f"Sampled {sample_size} queries to {sample_path}")
 
     print("\nDownload and sampling complete.")
 
