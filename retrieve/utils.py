@@ -22,15 +22,15 @@ def cosine_sim(A, B):
     return cosine_sim
 
 def format_table(table_name, corpus_tables, use_instance: bool, corpus_markdowns=None, trim=False):
-    rows = corpus_tables[table_name]["rows"]
+    rows = corpus_tables[table_name]["example_rows"]
     if trim:
         for row in rows:
             for i in range(len(row)):
                 if isinstance(row[i], str):
-                    # 500
+                    # trim long strings to first 500 chars
                     row[i] = row[i][:500]
 
-    cols = corpus_tables[table_name]["column_names_original"]
+    cols = corpus_tables[table_name]["column_names"]
 
     if corpus_markdowns is None:
         df = pd.DataFrame(rows, columns=cols)
