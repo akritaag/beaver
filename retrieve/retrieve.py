@@ -1,118 +1,137 @@
+import argparse
 from transformers import set_seed
 import os
-from tqdm import tqdm
+from tqdm import tqdm, trange
 import torch
 import numpy as np
-from tiger_utils import read_json, read_pickle, write_pickle, cosine_sim, write_json, split_inputs_by_interval
-from typing import Union
+from typing import Literal
+from pathlib import Path
 
 from rerank import Reranker, Pair
+from utils import format_table, read_json, write_json, cosine_sim
 
-def embed(texts: list[str], fn: Union[str, None], is_query: bool = False):
-    BATCH_SIZE = 256
-
+def embed(texts: list[str], fn, model: str, provider: Literal['local', 'openrouter']):
     if fn is not None and os.path.isfile(fn):
-        return torch.from_numpy(np.load(fn))
+        print(f'embedding computed for {fn}')
+        return
 
-    from sentence_transformers import SentenceTransformer
+    if provider == 'local':
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer(model, trust_remote_code=True).cuda()
+        embeds = model.encode(texts, show_progress_bar=True, batch_size=16)
+    elif provider == 'openrouter':
+        from dotenv import load_dotenv
+        from openai import OpenAI
 
-    model = SentenceTransformer("Qwen/Qwen3-Embedding-8B", trust_remote_code=True).cuda()
+        load_dotenv()
+        client = OpenAI(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=os.environ.get("OPENROUTER_API_KEY"),
+        )
 
-    embeds = []
-    for i in tqdm(range((len(texts) // BATCH_SIZE) + 1)):
-        _texts = texts[i * BATCH_SIZE : (i + 1) * BATCH_SIZE]
+        batch_size = 256
 
-        if len(_texts) == 0:
-            break
-
-        assert len(_texts) >= 1
-
-        vec = model.encode(_texts, prompt_name='query', show_progress_bar=False) if is_query else model.encode(_texts, show_progress_bar=False)
-
-        embeds.append(vec)
-
-    embeds = np.vstack(embeds)
+        embeds = []
+        for batch_idx in trange(0, len(texts), batch_size, desc="Batches"):
+            batch_texts = texts[batch_idx : batch_idx + batch_size]
+            response = client.embeddings.create(model=model, input=batch_texts)
+            embeddings = [e.embedding for e in response.data]
+            embeds += embeddings
+        
+        embeds = np.array(embeds)
+    
+    assert len(embeds) == len(texts)
 
     if fn is not None:
         np.save(fn, embeds)
 
-    embeds = torch.from_numpy(embeds)
-
-    return embeds
-
-def embed_dataset(dataset: str):
-    embed_dir = f"./data/beaver/{dataset}/retrieval"
-    create_directory(embed_dir)
+def retrieve_tables(dataset: str, model, k, provider):
+    dataset_dir = Path(f"./data/{dataset}")
+    retrieval_dir = Path(f"./data/{dataset}/retrieval")
+    retrieval_dir.mkdir(exist_ok=True)
 
     # embed questions
-    qs = read_json(f'./data/beaver/{dataset}/dev.json')
+    qs = read_json(dataset_dir / 'dev_sampled.json')
     qs = [x['question'] for x in qs]
-    q_embeds = embed(qs, f'{embed_dir}/q_embeds.npy', is_query=True)
+    q_embeds = embed(qs, dataset_dir / 'q_embeds.npy', model, provider)
     
     # embed tables
-    corpus_tables = read_json(f'./data/beaver/{dataset}/dev_tables.json')
-    # ts = [seq_table_for_embedding(corpus_tables[t]) for t in corpus_tables]
+    corpus_tables = read_json(dataset_dir / 'dev_tables.json')
     trim = dataset in ['sp', 'nova']
     print(f'trim tables: {trim}')
     ts = [format_table(t, corpus_tables, use_instance=False, trim=trim) for t in corpus_tables]
-    t_embeds = embed(ts, f'{embed_dir}/t_embeds.npy')
+    t_embeds = embed(ts,  retrieval_dir / 't_embeds.npy', model, provider)
 
-    score_fn = f"{embed_dir}/score.pkl"
-    print(score_fn)
     sim_scores = cosine_sim(q_embeds, t_embeds)
     print(sim_scores.shape)
-    write_pickle(sim_scores, score_fn)
 
-def rerank_dataset(dataset: str):
-    qs = read_json(f"./data/beaver/{dataset}/dev.json")
+    # TODO: write to JSON (because someone might not want to do reranking)
+    # rerank based on the top-50 tables (dict from q_id --> tables, same format as reranked_tables.json)
+    top_k_indices = torch.topk(sim_scores, k=k, dim=1).indices
+    top_k_tables = [[corpus_tables[i] for i in q_indices] for q_indices in top_k_indices]
+    write_json(top_k_tables, retrieval_dir / 'retrieved_tables.json')
+
+def rerank_tables(dataset: str, model, k):
+    qs = read_json(f"./data/beaver/{dataset}/dev_sampled.json")
     corpus_tables = read_json(f'./data/beaver/{dataset}/dev_tables.json')
     trim = dataset in ['sp', 'nova']
     print(f'trim tables: {trim}')
     formatted_tables = {t: format_table(t, corpus_tables, use_instance=False, trim=trim) for t in corpus_tables}
     
-    reranker = Reranker()
+    reranker = Reranker(model)
 
-    # rerank based on the top-50 tables
-    preds = get_pred_tables(dataset, k=50)
-    reranked_preds = {}
+    retrieval_dir = Path(f"./data/{dataset}/retrieval")
+    retrieval_dir.mkdir(exist_ok=True)
+    
+    retrieved_tables = read_json(retrieval_dir / 'retrieved_tables.json')
+    reranked_tables = {}
 
-    save_fn = f"./data/beaver/{dataset}/retrieval/reranked_preds.json"
+    save_fn = Path(retrieval_dir) / f"reranked_tables.json"
     if os.path.isfile(save_fn):
-        reranked_preds = read_json(save_fn)
+        reranked_tables = read_json(save_fn)
 
-    for q_idx in tqdm(q_idxs):
-        if str(q_idx) in reranked_preds:
+    for q in tqdm(qs):
+        q_id = q['id']
+        if q_id in reranked_tables:
             continue
 
         pairs = []
 
-        pred_tables = preds[q_idx]
-        for pred_table in pred_tables:
-            pairs.append(Pair(qs[q_idx]['question'], formatted_tables[pred_table]))
+        for pred_table in retrieved_tables[q_id]:
+            pairs.append(Pair(q['question'], formatted_tables[pred_table]))
 
         rerank_scores = []
-        num_partitions = 4
-        for partition in range(num_partitions):
-            _pairs = split_inputs_by_interval(pairs, num_partitions, partition)
-            rerank_scores.append(reranker.rerank(_pairs))
+        batch_size = 16
+        for batch_idx in trange(0, len(pairs), batch_size, desc="Reranking"):
+            batch_pairs = pairs[batch_idx : batch_idx + batch_size]
+            rerank_scores.append(reranker.rerank(batch_pairs))
         rerank_scores = torch.cat(rerank_scores)
-
-        assert len(rerank_scores) == 50
 
         # re-rank scores
         top_table_idxs = torch.sort(rerank_scores, descending=True).indices
-        top_tables = [pred_tables[i] for i in top_table_idxs]
-        reranked_preds[str(q_idx)] = top_tables
+        top_tables = [retrieved_tables[i] for i in top_table_idxs]
+        reranked_tables[q_id] = top_tables[:k]
     
-        write_json(reranked_preds, save_fn)
+        write_json(reranked_tables, save_fn)
 
-if __name__ == "__main__":
+def main():
     set_seed(1234)
 
-    dataset = ['dw', 'sp', 'neutron', 'nova'][-1]
-    k = 10
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str)
+    parser.add_argument("--embed_model", type=str, default="Qwen/Qwen3-Embedding-8B")
+    parser.add_argument("--embed_k", type=int, default=50)
+    parser.add_argument("--provider", choices=['local', 'openrouter'])
+    parser.add_argument("--rerank_model", type=str, default="Qwen/Qwen3-Reranker-8B")
+    parser.add_argument("--rerank_k", type=int, default=15)
+    args = parser.parse_args()
 
-    print(dataset)
+    print(f'Retrieving {args.embed_k} tables using {args.rerank_model}')
+    retrieve_tables(args.dataset, args.embed_model, args.embed_k, args.provider)
 
-    # embed_dataset(dataset)
-    # rerank_dataset(dataset)
+    if args.rerank_model:
+        print(f'Reranking to {args.rerank_k} tables using {args.rerank_model}')
+        rerank_tables(args.dataset, args.rerank_model, args.rerank_k)
+
+if __name__ == "__main__":
+    main()
