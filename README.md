@@ -5,6 +5,7 @@ This repository contains the datasets and evaluation for the **Beaver** text-to-
 ## Repository Structure
 
 ```
+├── .env                                 # Credential file (API keys + MySQL password)
 ├── data/                                # Dataset files (e.g. metadata, questions, tables)
 │   ├── dw/                              # `dw` database
 │   │   ├── dev.json                     # Question file
@@ -13,7 +14,6 @@ This repository contains the datasets and evaluation for the **Beaver** text-to-
 │   │   └── example.json                 # Few-shot examples
 │   └── ...                              # Other databases
 └── eval/                                # Evaluation baselines and scripts
-    ├── .env                             # Credential file (API keys + MySQL password)
     ├── ReFoRCE/                         # ReFoRCE evaluation pipeline
     ├── fewshot/                         # Few-shot evaluation pipeline
     ├── dailsql/                         # DAIL-SQL evaluation pipeline
@@ -26,7 +26,7 @@ This repository contains the datasets and evaluation for the **Beaver** text-to-
 
 ### Credentials (`.env` file)
 
-All API keys and MySQL credentials are managed through a single `eval/.env` file.
+All API keys and MySQL credentials are managed through a single `.env` file at the root directory.
 
 The `.env` file should contain:
 ```
@@ -42,7 +42,7 @@ MYSQL_PASSWORD=xxx
 ```
 
 ### Data Pre-processing
-You can download the dataset directly from Hugging Face using the provided script:
+You can download the [dataset](https://huggingface.co/collections/beaverbench/beaver-dataset) directly from Hugging Face using the provided script (this is a gated dataset so you need to authenticate):
 
 ```bash
 python data/download_hf.py --sample [sample_size]
@@ -74,13 +74,14 @@ python sample.py
 We adopt a retrieve-then-rerank pipeline to 
 
 ```
-python retrieve.py --embedding_model xxx --reranker_model xxx --k xxx
+python retrieve/retrieve.py --dataset [dataset] --embed_provider local --rerank_model Qwen/Qwen3-Reranker-8B
 ```
 
 * `dataset`: one of `dw`, `dw_real`, `neutron`, `nova`
 * `embedding_model` (default): 
 * `embed_k`: used for embedding to determine the number of tables to retrieve, default `50`
-* `reranker_model`: default `Qwen/Qwen3-Reranker-8B`, so no 
+* `embed_provider`
+* `reranker_model`: default None if you do not want to re-rerank, but we used `Qwen/Qwen3-Reranker-8B` in the paper, so no 
 * `rerank_k`: default `15`, so no 
 These tables will then be provided to different text-to-SQL methods to generate the final output.
 * if both embedding + reranking, then `rerank_k` tables will be provided

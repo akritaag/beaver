@@ -96,33 +96,36 @@ def main():
         else:
             print(f"No table data found for split {table_source_split} in beaver-table")
 
-        # 4. Sampling Logic (Seed 77, sample 5)
+        # 4. Sampling Logic (Seed 77)
         if len(processed_queries) > 0:
             random.seed(77)
-            indices = list(range(len(processed_queries)))
-            sample_size = min(sample_size, len(processed_queries))
-            sampled_indices = random.sample(indices, sample_size)
+            # indices = list(range(len(processed_queries)))
+            # sample_size = min(sample_size, len(processed_queries))
+            # sampled_indices = random.sample(indices, sample_size)
             
             # Load reranked_preds if restored
-            reranked_preds = {}
-            if os.path.exists(target_rerank_path):
-                with open(target_rerank_path, 'r') as f:
-                    reranked_preds = json.load(f)
+            # reranked_preds = {}
+            # if os.path.exists(target_rerank_path):
+            #     with open(target_rerank_path, 'r') as f:
+            #         reranked_preds = json.load(f)
             
-            sampled_data_with_preds = []
-            for idx in sampled_indices:
-                item = processed_queries[idx]
-                # If reranked_preds exists, add top_k_tables
-                if reranked_preds:
-                    # Use the full id directly after migration
-                    item_id = item.get("id", "")
-                    preds = reranked_preds.get(item_id, [])
-                    # retrieve top-15 tables
-                    item["top_k_tables"] = preds[:15]
-                sampled_data_with_preds.append(item)
+            # sampled_data_with_preds = []
+            # for idx in sampled_indices:
+            #     item = processed_queries[idx]
+            #     # If reranked_preds exists, add top_k_tables
+            #     # if reranked_preds:
+            #     #     # Use the full id directly after migration
+            #     #     item_id = item.get("id", "")
+            #     #     preds = reranked_preds.get(item_id, [])
+            #     #     # retrieve top-15 tables
+            #     #     item["top_k_tables"] = preds[:15]
+            #     sampled_data_with_preds.append(item)
             
+            sample_size = min(sample_size, len(processed_queries))
+            sampled_data = random.sample(processed_queries, sample_size)
+
             sample_path = os.path.join(split_dir, "dev_sampled.json")
-            save_json(sampled_data_with_preds, sample_path)
+            save_json(sampled_data, sample_path)
             
             # indices_path = os.path.join(split_dir, "dev_sampled_indices.json")
             # save_json(sampled_indices, indices_path)
