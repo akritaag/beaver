@@ -3,16 +3,10 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 from openai import OpenAI
 
-from benchmark_ete import get_ete_prompts
+from prompt import get_ete_prompts
 from utils import EvalConfig
 
 import argparse
-
-try:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
-except ImportError:
-    pass
 
 MODEL_MAP = {
     "gpt-5-mini": "gpt-5-mini",
@@ -188,13 +182,12 @@ if __name__ == "__main__":
 
     model = args.model
     dataset = args.dataset
-    print(dataset)
     q_fn = args.q_fn
 
-    print(args.gold_tables, args.join_keys, args.mapping, args.knowledge, args.decomp)
     eval_config = EvalConfig(
         gold_tables=args.gold_tables, join_keys=args.join_keys, mapping=args.mapping, knowledge=args.knowledge, decomp=args.decomp
     )
+    print(eval_config)
 
     prompts, instance_ids = get_ete_prompts(dataset, q_fn, eval_config, args.data_dir)
     

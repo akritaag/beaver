@@ -65,7 +65,7 @@ echo ""
 echo "Step 1: Generating Predictions"
 echo "=============================="
 cd "$SCRIPT_DIR"
-python parallel_execute.py \
+python execute.py \
     --model "$MODEL" \
     --dataset "$DATASET" \
     --data_dir "$DATA_DIR" \
