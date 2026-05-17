@@ -1,25 +1,28 @@
 # 🦫 BEAVER: An Enterprise Benchmark for Text-to-SQL
 
-This repository contains the datasets and evaluation for the **Beaver** text-to-SQL benchmark. It includes four text-to-SQL methods for evaluation: **ReFoRCE**, **DAIL-SQL**, **DIN-SQL**, and **Few-shot**.
+[![Dataset](https://img.shields.io/badge/HuggingFace-Dataset-blue?logo=huggingface)](https://huggingface.co/collections/beaverbench/beaver-dataset)
+[![Paper](https://img.shields.io/badge/arXiv-Paper-red?logo=arxiv)](https://arxiv.org/abs/2409.02038)
+
+This repository contains the evaluation code for the **BEAVER** text-to-SQL benchmark. It includes (i) four text-to-SQL methods: **ReFoRCE**, **DAIL-SQL**, **DIN-SQL**, and **Few-shot** (ii) two evaluation modes: coarse-grained evaluation (execution accuracy) and fine-grained evaluation across five subtasks critical to text-to-SQL.
 
 ## Repository Structure
 
 ```
 ├── .env                                 # Credential file (API keys + MySQL password)
 ├── data/                                # Dataset files (e.g. metadata, questions, tables)
-│   ├── dw/                              # `dw` database
+│   ├── dw/                              # `dw` dataset
 │   │   ├── dev.json                     # Question file
 │   │   ├── dev_tables.json              # Tables metadata
-│   │   ├── top_tables.json              # Top-k tables for generation
 │   │   └── example.json                 # Few-shot examples
-│   └── ...                              # Other databases
-└── eval/                                # Evaluation baselines and scripts
-    ├── ReFoRCE/                         # ReFoRCE evaluation pipeline
-    ├── fewshot/                         # Few-shot evaluation pipeline
-    ├── dailsql/                         # DAIL-SQL evaluation pipeline
-    ├── dinsql/                          # DIN-SQL evaluation pipeline
-    ├── evaluate_decomposition.py        # Script for evaluating query decomposition subtask
-    └── evaluate_extraction.py           # Script for evaluating other subtasks
+│   └── ...                              # Other datasets
+├── eval/                                # Evaluation methods and scripts
+│   ├── reforce/                         # ReFoRCE evaluation pipeline
+│   ├── fewshot/                         # Few-shot evaluation pipeline
+│   ├── dailsql/                         # DAIL-SQL evaluation pipeline
+│   ├── dinsql/                          # DIN-SQL evaluation pipeline
+│   ├── evaluate_decomposition.py        # Script for evaluating query decomposition subtask
+│   └── evaluate_extraction.py           # Script for evaluating other subtasks
+└── retrieve/                            # Table retrieval
 ```
 
 ## Getting Started
@@ -33,7 +36,6 @@ The `.env` file should contain:
 # LLM API Keys
 OPENAI_API_KEY=xxx
 OPENROUTER_API_KEY=xxx
-GOOGLE_API_KEY=xxx
 
 # MySQL Credentials (shared across all databases)
 MYSQL_HOST=localhost
@@ -42,62 +44,47 @@ MYSQL_PASSWORD=xxx
 ```
 
 ### Data Pre-processing
-You can download the [dataset](https://huggingface.co/collections/beaverbench/beaver-dataset) directly from Hugging Face using the provided script (this is a gated dataset so you need to authenticate):
+Our [gated dataset](https://huggingface.co/collections/beaverbench/beaver-dataset) is hoted on Hugging Face. You must be **authenticated** to access it, which means logging in through your CLI before downloading any files.
 
 ```bash
 python data/download_hf.py --sample [sample_size]
 ```
 
-For each of the four splits (`dw`, `nova`, `neutron`, `dw_real`), this script generates the following additional files
-* `dev.json`: The main dataset questions file.
-* `dev_tables.json`: The tables and schema metadata.
-* `dev_sampled.json`: running on the entire dataset could be very expensive, therefore, we the subset (by default `sample_size=100`) we use for testing
+For each of the four splits (`dw`, `nova`, `neutron`, `dw_real`), this script automatically downloads the datasets from Hugging Face and generates:
+* `dev.json`: The full set of questions.
+* `dev_tables.json`: The full set of tables.
+* `dev_sampled.json`: A sampled subset of questions of size `sample_size` (default `100`) since running on the full dataset can be computationally expensive
 
-<!-- Alternatively, you can manually download the necessary data files from [here](https://drive.google.com/drive/folders/1xV4Wxk_AuE8gx-Q678mas7zChrAQliof?usp=sharing) into their respective folders (e.g., `data/dw/`). -->
-<!-- Ensure the following files are present: -->
-<!-- - `dev.json`:  -->
-<!-- - `dev_tables.json`:  -->
-<!-- - `reranked_preds.json`: The table retrieval rankings (used to generate `dev_sampled.json`). -->
-<!-- - `example.json`: Few-shot examples. -->
-
-You should also follow the instruction [here](https://huggingface.co/datasets/beaverbench/beaver-table#getting-started) to setup the MySQL database.
-
-<!-- - `sample.py`: A utility script. -->
-
-<!-- *(Optional)*: If you want to run evaluations on a smaller, sampled subset, you can execute the `sample.py` script to generate a sampled split for that dataset: -->
-<!-- ```bash
-cd data/neutron
-python sample.py
-``` -->
+You should also follow the instruction [here](https://huggingface.co/datasets/beaverbench/beaver-table#getting-started) to setup the MySQL databases.
 
 ### Table retrieval
-We adopt a retrieve-then-rerank pipeline to 
+The following command applies a retrieve-then-rerank pipeline to retrieve tables in `dev_tables.json` that are semantically relevant to questions in `dev_sampled.json`, guiding downstream text-to-SQL generation. The pipeline uses a dense embedding model `embed_model` for retrieval and an optional reranker model `rerank_model` for improved ordering. If `rerank_model` is omitted, the pipeline performs retrieval only, without the reranking step.
 
 ```
 python retrieve/retrieve.py --dataset [dataset] --embed_provider local --rerank_model Qwen/Qwen3-Reranker-8B
 ```
 
+The command takes the following arguments:
 * `dataset`: one of `dw`, `dw_real`, `neutron`, `nova`
-* `embedding_model` (default): 
-* `embed_k`: used for embedding to determine the number of tables to retrieve, default `50`
-* `embed_provider`
-* `reranker_model`: default None if you do not want to re-rerank, but we used `Qwen/Qwen3-Reranker-8B` in the paper, so no 
-* `rerank_k`: default `15`, so no 
-These tables will then be provided to different text-to-SQL methods to generate the final output.
-* if both embedding + reranking, then `rerank_k` tables will be provided
-* if only embedding, then `embed_k` tables will be provided
+* `embed_model` (default `Qwen/Qwen3-Embedding-8B`): the dense embedding model for the retrieval step
+* `embed_k` (default `50`): the number of tables returned by the retrieval step
+* `embed_provider`: `local` (GPU required) or `openrouter` (requires a valid `OPENROUTER_API_KEY`)
+* `rerank_model` (default `None`): the optional reranker model for the reranking step; the paper used `Qwen/Qwen3-Reranker-8B`
+* `rerank_k` (default `15`): the number of tables returned by the reranking step
+
+Note: the retrieval step outputs `retrieved_tables.json`, and the reranking step (if enabled) outputs `reranked_tables.json`. While generating SQL, the text-to-SQL method uses `reranked_tables.json` if it exists and otherwise `retrieved_tables.json`.
 
 ## Text-to-SQL methods
 
 We consider four text-to-SQL methods:
-1. ReFoRCE (adapted from [this official ReFoRCE implementation](https://github.com/Snowflake-Labs/ReFoRCE/tree/o3/methods/ReFoRCE))
-2. DAIL-SQL (adapted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dailsql))
-3. DIN-SQL (adapted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dinsql))
-4. Few-shot
+1. ReFoRCE (adapted from [this official ReFoRCE implementation](https://github.com/Snowflake-Labs/ReFoRCE/tree/o3/methods/ReFoRCE)): an agentic method with candidate generation, majority voting, and column exploration.
+2. DIN-SQL (adapted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dinsql)): a method with query decomposition and self-correction
+3. DAIL-SQL (adapted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dailsql)): a method with example selection
+4. Few-shot: a method with static in-context examples
 
 ### Environment
 
-You can manage these environments using either `conda` or `venv`.
+You can setup the package environment using either `conda` or `venv`.
 
 ```bash
 cd eval
@@ -112,27 +99,23 @@ source beaver-eval/bin/activate
 
 pip install -r requirements.txt
 
-# To run the DAIL‑SQL method, please execute the following additional commands:
-python nltk_downloader.py
+# To run the DAIL‑SQL method, execute the following additional commands:
+python dailsql/nltk_downloader.py
 python -m spacy download en_core_web_sm
 ```
 
 ### SQL generation
 
-All baselines can be executed using the `run.sh` script in their respective folders with named arguments:
-
-For example, to execute ReFoRCE,
+All methods can be executed using the `run.sh` script in their respective folders. For example, to execute ReFoRCE,
 ```bash
-cd eval/ReFoRCE
-./run.sh --model <model> --dataset <dataset> --setting <0|1|2>
+cd eval/reforce
+./run.sh --model [model] --dataset [dataset] --setting {0|1|2}
 ```
-
-- **Setting 0** *(Standard baseline)*: Standard end-to-end setting with no hints. Base information with only the top-k tables provided.
-- **Setting 1**: With hints for schema-linking subtasks. Includes gold tables, column mapping, and join keys.
-- **Setting 2**: With hints for all subtasks. Includes **Setting 1**, domain knowledge, and subqueries.
-
-<!-- The database name is automatically determined from the `--dataset` argument — no need to create separate credential files per database. -->
-
+- `model`: the LLM for generating the text-to-SQL (e.g., `gpt-5-mini`)
+- `dataset`: one of `dw`, `dw_real`, `neutron`, `nova`
+- `setting=0` *(default setting)*: Standard end-to-end setting with no hints. Base information with only the top-k tables provided.
+- `setting=1`: With hints for three schema-linking subtasks. Includes gold tables, column mapping, and join keys.
+- `setting=2`: With hints for all five subtasks. Includes three subtasks in `setting=1`, domain knowledge, and subquery decomposition.
 
 ## Evaluation
 
@@ -142,12 +125,12 @@ cd eval/ReFoRCE
 
 
 ### Execution accuracy
-After generating the SQL predictions, the `run.sh` scripts will automatically execute a `unify.py` script. This executes both the predicted SQL and the gold SQL against the MySQL database and saves the outputs as CSV files inside `eval/output/unified/<baseline>/<run_name>/`. 
+After generating the SQL predictions, the `run.sh` scripts will automatically execute a `unify.py` script. This executes both the predicted SQL and the gold SQL against the MySQL database and saves the outputs as CSV files inside `eval/output/unified/<method>/<run_name>/`. 
 
 To obtain the final evaluation metrics (exact set match over the CSVs), you must run the `unified_evaluation.py` script on the unified directory:
 ```bash
 cd eval
-python unified_evaluation.py --unified_dir output/unified/<baseline>/<run_name>
+python unified_evaluation.py --unified_dir output/unified/<method>/<run_name>
 ```
 *(Outputs `evaluation_summary.json` containing the execution accuracy and detailed question-level results)*
 
@@ -165,7 +148,7 @@ python evaluate_decomposition.py \
   --input_dir ReFoRCE/output/gpt-5-mini-beaver-dw-setting0-log-*/ \
   --gold_file ../data/dw/dev.json \
   --model gpt-5-mini \
-  --baseline_method reforce \
+  --method reforce \
   --num_workers 40
 ```
 *(Outputs `summary.json` containing the average LLM-as-a-judge decomposition scores)*
@@ -178,7 +161,7 @@ python evaluate_extraction.py \
   --input_dir ReFoRCE/output/gpt-5-mini-beaver-dw-setting0-log-*/ \
   --gold_file ../data/dw/dev.json \
   --model gpt-5-mini \
-  --baseline_method reforce \
+  --method reforce \
   --num_workers 40
 ```
 *(Outputs `summary.json` with F1 scores for these tasks)*
