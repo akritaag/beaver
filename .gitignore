@@ -171,6 +171,7 @@ data/neutron/*
 
 eval/reforce/output/
 eval/reforce/preprocessed_data/
+eval/reforce/reforce/
 
 # sql credential
 eval/*.json
@@ -178,12 +179,16 @@ eval/*.json
 eval/dinsql/preprocessed_data/*/
 eval/dinsql/output
 eval/dinsql/postprocessed_data/*/
+eval/dinsql/dinsql
+
 # eval/dailsql
 eval/dailsql/postprocessed_data/*/
 eval/dailsql/preprocessed_data/*/
 eval/dailsql/output
+eval/dailsql/dailsql
 
 eval/fewshot/output
+eval/fewshot/fewshot
 
 eval/output/
 

@@ -12,6 +12,7 @@ import os
 import os.path as osp
 import sys
 import re
+from pathlib import Path
 
 
 def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold_tables_filter=None, split='dw'):
@@ -191,8 +192,24 @@ def format_join_keys_for_prompt(join_keys):
     
     return "\n".join(lines)
 
+def read_json(fn):
+    with open(fn) as f:
+        return json.load(f)
 
-def convert_beaver_questions_to_dinsql_format(beaver_questions_path, output_path, option=1, templates=None):
+def get_retrieved_tables(dataset: str, data_dir="../../data"):
+    retrieved_tables_fn = Path(f"{data_dir}/{dataset}/retrieval/retrieved_tables.json")
+    reranked_tables_fn = Path(f"{data_dir}/{dataset}/retrieval/reranked_tables.json")
+
+    assert retrieved_tables_fn.exists()
+    
+    if reranked_tables_fn.exists():
+        print(f'Loading reranked tables from {reranked_tables_fn}')
+        return read_json(reranked_tables_fn)
+    
+    print(f'Loading retrieved tables from {retrieved_tables_fn}')
+    return read_json(retrieved_tables_fn)
+
+def convert_beaver_questions_to_dinsql_format(dataset, beaver_questions_path, output_path, option=1, templates=None):
     """
     Convert Beaver's dev_dw.json format to DINSQL's expected format
     
@@ -200,7 +217,7 @@ def convert_beaver_questions_to_dinsql_format(beaver_questions_path, output_path
         beaver_questions_path: Path to dev_dw.json
         output_path: Path to save the converted questions
         option: Preprocessing option (1, 2, or 3)
-            1: Base information with top 20 tables
+            1: Base information with top k tables
             2: Base information with gold tables + mapping + join keys
             3: Base information with full context
         templates: Optional templates dict for option 3
@@ -217,8 +234,10 @@ def convert_beaver_questions_to_dinsql_format(beaver_questions_path, output_path
     with open(beaver_questions_path, 'r') as f:
         beaver_questions = json.load(f)
     
+    retrieved_tables = get_retrieved_tables(dataset)
+    
     dinsql_format = []
-    for idx, question_info in enumerate(beaver_questions):
+    for question_info in beaver_questions:
         base_item = {
             'id': question_info['id'],
             'question': question_info['question'],
@@ -229,7 +248,7 @@ def convert_beaver_questions_to_dinsql_format(beaver_questions_path, output_path
         # Option 1+: Store gold_tables for filtering
         if option >= 1:
             if option == 1:
-                 base_item['tables'] = question_info.get('top_k_tables', [])
+                 base_item['tables'] = retrieved_tables[question_info['id']]
             else:
                  base_item['tables'] = question_info.get('tables', [])
             # strip db#sep# from gold_tables generic and lowercase
@@ -362,7 +381,7 @@ if __name__ == '__main__':
     print("=" * 70)
     
     option_descriptions = {
-        1: "Base information (question) with top 20 tables available",
+        1: "Base information (question) with top k tables available",
         2: "Base information with gold tables + mapping + join key hints",
         3: "Base information with full context (mapping, join keys, external info, subqueries)"
     }
@@ -449,6 +468,7 @@ if __name__ == '__main__':
             templates = json.load(f)
 
     dinsql_questions = convert_beaver_questions_to_dinsql_format(
+        args.split,
         beaver_questions_path, 
         output_questions_path,
         option=args.option,

@@ -210,7 +210,7 @@ def convert_beaver_to_reforce(dataset, beaver_questions_path, beaver_tables_path
         beaver_tables_path: Path to Beaver dev_tables_new.json
         output_path: Path to save the converted data
         preprocessing_option: Integer 1-3 for preprocessing level:
-            1 - Base info with top 20 tables
+            1 - Base info with top k tables
             2 - Base info with gold tables + mapping + join keys
             3 - Base info with gold tables + mapping + join keys + external knowledge + subqueries
         join_keys_path: Optional path to global join keys file (for option 2)
