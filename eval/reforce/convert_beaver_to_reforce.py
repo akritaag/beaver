@@ -183,8 +183,24 @@ def process_sql(sql, db_id="dw"):
     sql = ' '.join(sql.split())   
     return sql
 
+def read_json(fn):
+    with open(fn) as f:
+        return json.load(f)
 
-def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_path, sampled_questions_path,
+def get_retrieved_tables(dataset: str, data_dir="../../data"):
+    retrieved_tables_fn = Path(f"{data_dir}/{dataset}/retrieval/retrieved_tables.json")
+    reranked_tables_fn = Path(f"{data_dir}/{dataset}/retrieval/reranked_tables.json")
+
+    assert retrieved_tables_fn.exists()
+    
+    if reranked_tables_fn.exists():
+        print(f'Loading reranked tables from {reranked_tables_fn}')
+        return read_json(reranked_tables_fn)
+    
+    print(f'Loading retrieved tables from {retrieved_tables_fn}')
+    return read_json(retrieved_tables_fn)
+
+def convert_beaver_to_reforce(dataset, beaver_questions_path, beaver_tables_path, output_path, sampled_questions_path,
                               preprocessing_option=2, join_keys_path=None, sample_size=None, seed=42, db_id="dw"):
     """
     Convert Beaver dataset to ReFoRCE format with preprocessing options.
@@ -248,9 +264,9 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
     
     print(f"\nPreprocessing option: {preprocessing_option}")
     option_desc = {
-        1: "Base info with TOP 20 tables only",
+        1: "Base info with TOP-K tables only",
         2: "Base info with GOLD tables + MAPPING + JOIN KEYS",
-        3: "Base info with GOLD tables + MAPPING + JOIN KEYS + EXTERNAL KNOWLEDGE + SUBQUERY GOLD QUESTIONS + SUBQUERY GOLD QUERIES"
+        3: "Base info with GOLD tables + MAPPING + JOIN KEYS + DOMAIN KNOWLEDGE + SUBQUERY GOLD QUESTIONS + SUBQUERY GOLD QUERIES"
     }
     print(f"Mode: {option_desc.get(preprocessing_option, 'Unknown')}")
     
@@ -309,6 +325,8 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
                     new_join_keys.append([c.lower() for c in jk])
                 item['join_keys'] = new_join_keys
 
+    retrieved_tables = get_retrieved_tables(dataset)
+
     for idx, item in enumerate(beaver_questions):
         if (idx + 1) % 10 == 0:
             print(f"  Progress: {idx + 1}/{len(beaver_questions)}")
@@ -316,7 +334,7 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
         # Determine which tables to include based on preprocessing option
         table_refs = []
         if preprocessing_option == 1:
-            gold_tables = item.get('top_k_tables', [])
+            gold_tables = retrieved_tables[item['id']]
         else:
             gold_tables = item.get('tables', [])
         
@@ -430,12 +448,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Preprocessing Options:
-  1 - Base info with TOP 20 tables only (default, most focused)
+  1 - Base info with TOP K tables only (default, most focused)
   2 - Base info with GOLD tables + MAPPING + JOIN KEYS (full context)
   3 - Base info with GOLD tables + MAPPING + JOIN KEYS + EXTERNAL KNOWLEDGE + SUBQUERY GOLD QUESTIONS + SUBQUERY GOLD QUERIES
 
 Examples:
-  # Option 1: Base info with TOP 20 tables only (default)
+  # Option 1: Base info with TOP K tables only (default)
   python convert_beaver_to_reforce.py --beaver_questions beaver/dev_dw_new/combined_fixed.json \\
     --beaver_tables beaver/dev_tables_new.json --output output1.json
   
@@ -451,6 +469,8 @@ Examples:
   
         """
     )
+    parser.add_argument('--dataset', type=str, default="dw",
+                       help='dataset (default: dw)')
     parser.add_argument('--beaver_questions', type=str, required=True,
                        help='Path to Beaver questions file (dev_dw_new/combined_fixed.json)')
     parser.add_argument('--beaver_tables', type=str, required=True,
@@ -476,6 +496,7 @@ Examples:
         args.db_id = args.db_id.replace('_real', '')
     
     convert_beaver_to_reforce(
+        args.dataset,
         args.beaver_questions,
         args.beaver_tables,
         args.output,

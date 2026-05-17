@@ -34,9 +34,9 @@ OPTION=$((SETTING + 1))
 
 # --- Load .env ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "${SCRIPT_DIR}/../.env" ]; then
+if [ -f "${SCRIPT_DIR}/../../.env" ]; then
     set -a
-    source "${SCRIPT_DIR}/../.env"
+    source "${SCRIPT_DIR}/../../.env"
     set +a
 fi
 
@@ -58,6 +58,7 @@ export MYSQL_DATABASE="${DB_NAME}"
 mkdir -p "preprocessed_data/${DATASET}"
 
 python convert_beaver_to_reforce.py \
+    --dataset "${DATASET}" \
     --beaver_questions "../../data/${DATASET}/dev_sampled.json" \
     --beaver_tables "../../data/${DATASET}/dev_tables.json" \
     --output "preprocessed_data/${DATASET}/beaver_${DATASET}_opt${OPTION}_sampled.json" \
