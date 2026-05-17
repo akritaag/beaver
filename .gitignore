@@ -169,8 +169,8 @@ data/nova/*
 data/neutron/*
 
 
-eval/ReFoRCE/output/
-eval/ReFoRCE/preprocessed_data/
+eval/reforce/output/
+eval/reforce/preprocessed_data/
 
 # sql credential
 eval/*.json
