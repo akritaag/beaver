@@ -12,7 +12,7 @@ from itertools import product
 from typing import Tuple, Any, List, Set
 import sqlparse
 import tqdm
-from google.cloud import bigquery
+# from google.cloud import bigquery
 
 proj_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
 sys.path = [osp.join(proj_dir, '../')] + sys.path

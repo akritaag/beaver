@@ -145,7 +145,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_tokens', type=int, default=1000)
     parser.add_argument('--post_mode', type=str, choices=['pass@n', 'consistency@n', 'consistency-from-generated-pass@n', None], default=None)
     parser.add_argument("--is_sql_debug", action="store_true", default=False)
-    parser.add_argument("--processes", type=int, default=120)  # New argument for specifying the number of processes
+    parser.add_argument("--processes", type=int, default=16)  # New argument for specifying the number of processes
     parser.add_argument("--override", action="store_true")
     args = parser.parse_args()
 

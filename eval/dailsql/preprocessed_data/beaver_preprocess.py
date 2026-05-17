@@ -1,7 +1,7 @@
 """
 Preprocessing script to convert Beaver dataset format to DAILSQL format
 Supports 3 options for different levels of information:
-1. Option 1: Base information with top 20 tables available
+1. Option 1: Base information with top k tables available
 2. Option 2: Base information with gold tables + mapping + join keys
 3. Option 3: Base information with full context (mapping, join keys, external info, subqueries)
 
@@ -14,6 +14,7 @@ import sys
 import spacy
 from tqdm import tqdm
 import re
+from pathlib import Path
 
 
 def convert_beaver_tables_to_dailsql_format(beaver_tables_path, output_path, gold_tables_filter=None, split='dw'):
@@ -237,8 +238,24 @@ def format_join_keys_for_prompt(join_keys):
     
     return "\n".join(lines)
 
+def read_json(fn):
+    with open(fn) as f:
+        return json.load(f)
 
-def convert_beaver_questions_to_dailsql_format(beaver_questions_path, output_path, option=1, templates=None):
+def get_retrieved_tables(dataset: str, data_dir="../../data"):
+    retrieved_tables_fn = Path(f"{data_dir}/{dataset}/retrieval/retrieved_tables.json")
+    reranked_tables_fn = Path(f"{data_dir}/{dataset}/retrieval/reranked_tables.json")
+
+    assert retrieved_tables_fn.exists()
+    
+    if reranked_tables_fn.exists():
+        print(f'Loading reranked tables from {reranked_tables_fn}')
+        return read_json(reranked_tables_fn)
+    
+    print(f'Loading retrieved tables from {retrieved_tables_fn}')
+    return read_json(retrieved_tables_fn)
+
+def convert_beaver_questions_to_dailsql_format(dataset, beaver_questions_path, output_path, option=1, templates=None):
     """
     Convert Beaver's dev_dw.json format to DAILSQL's expected format
     
@@ -246,7 +263,7 @@ def convert_beaver_questions_to_dailsql_format(beaver_questions_path, output_pat
         beaver_questions_path: Path to dev_dw.json
         output_path: Path to save the converted questions
         option: Preprocessing option (1, 2, or 3)
-            1: Base information with top 20 tables
+            1: Base information with top k tables
             2: Base information with gold tables + mapping + join keys
             3: Base information with full context (mapping, join keys, external info, subqueries)
         templates: Optional templates dict for option 3
@@ -265,15 +282,17 @@ def convert_beaver_questions_to_dailsql_format(beaver_questions_path, output_pat
     
     # Load spacy for tokenization
     nlp = spacy.load("en_core_web_sm")
+
+    retrieved_tables = get_retrieved_tables(dataset)
     
     dailsql_format = []
-    for idx, question_info in tqdm(enumerate(beaver_questions)):
+    for question_info in tqdm(beaver_questions):
         question_text = question_info['question']
 
         # Option 1+: Add gold tables to question
         if option >= 1:
             if option == 1:
-                 gold_tables = question_info.get('top_k_tables', [])
+                 gold_tables = retrieved_tables[question_info['id']]
             else:
                  gold_tables = question_info.get('tables', [])
             # remove the #sep# prefix (generic)
@@ -352,7 +371,7 @@ def convert_beaver_questions_to_dailsql_format(beaver_questions_path, output_pat
         if option >= 1:
             # Use lowercase for logic to match schema
             if option == 1:
-                raw_gold_tables = question_info.get('top_k_tables', [])
+                raw_gold_tables = retrieved_tables[question_info['id']]
             else:
                 raw_gold_tables = question_info.get('tables', [])
 
@@ -422,30 +441,14 @@ if __name__ == '__main__':
                         help='Specific path to questions file (overrides beaver_dir default)')
     parser.add_argument('--tables_file', type=str, default=None,
                         help='Specific path to tables file (overrides beaver_dir default)')
-    parser.add_argument('--split', type=str, default='dw', choices=['dw', 'sp', 'neutron', 'nova', 'csail_stata_neutron', 'csail_stata_nova', 'dw_real', 'sp_real', 'sp_easy'],
+    parser.add_argument('--dataset', type=str, default='dw', choices=['dw', 'sp', 'neutron', 'nova', 'dw_real', 'sp_real', 'sp_easy'],
                         help='Split to preprocess (default: dw)')
     args = parser.parse_args()
     
     proj_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
     beaver_base_dir = osp.join(proj_dir, args.beaver_dir)
-    
-    # Determine output subdir name based on input filename if provided, else generic
-    if args.questions_file and ('sp' in args.questions_file or 'neutron' in args.questions_file or 'nova' in args.questions_file or 'dw_real' in args.questions_file or 'sp_real' in args.questions_file or 'sp_easy' in args.questions_file):
-         if 'neutron' in args.questions_file:
-             subdir_name = f'beaver_neutron_opt{args.option}'
-         elif 'nova' in args.questions_file:
-             subdir_name = f'beaver_nova_opt{args.option}'
-         elif 'dw_real' in args.questions_file:
-             subdir_name = f'beaver_dw_real_opt{args.option}'
-         elif 'sp_real' in args.questions_file:
-             subdir_name = f'beaver_sp_real_opt{args.option}'
-         elif 'sp_easy' in args.questions_file:
-             subdir_name = f'beaver_sp_easy_opt{args.option}'
-         else:
-             subdir_name = f'beaver_sp_opt{args.option}'
-    else:
-         subdir_name = f'beaver_dw_opt{args.option}'
-         
+
+    subdir_name = f'beaver_{args.dataset}_opt{args.option}'     
     output_base_dir = osp.join(proj_dir, 'preprocessed_data', subdir_name)
     
     print("=" * 70)
@@ -453,7 +456,7 @@ if __name__ == '__main__':
     print("=" * 70)
     
     option_descriptions = {
-        1: "Base information (question) with top 20 tables available",
+        1: "Base information (question) with top k tables available",
         2: "Base information with gold tables + mapping + join key hints",
         3: "Base information with full context (mapping, join keys, external info, subqueries)"
     }
@@ -499,28 +502,10 @@ if __name__ == '__main__':
         beaver_tables_path, 
         output_tables_path,
         gold_tables_filter=None,  # Include all tables for all options
-        split=args.split
+        split=args.dataset
     )
-    
-    # Convert questions with appropriate option
-    # Use explicit naming if sp
-    # Use explicit naming if sp/neutron/nova
-    if args.questions_file and ('sp' in args.questions_file or 'neutron' in args.questions_file or 'nova' in args.questions_file or 'dw_real' in args.questions_file or 'sp_real' in args.questions_file or 'sp_easy' in args.questions_file):
-         if 'neutron' in args.questions_file:
-             output_questions_filename = f'beaver_neutron_opt{args.option}_preprocessed.json'
-         elif 'nova' in args.questions_file:
-             output_questions_filename = f'beaver_nova_opt{args.option}_preprocessed.json'
-         elif 'dw_real' in args.questions_file:
-             output_questions_filename = f'beaver_dw_real_opt{args.option}_preprocessed.json'
-         elif 'sp_real' in args.questions_file:
-             output_questions_filename = f'beaver_sp_real_opt{args.option}_preprocessed.json'
-         elif 'sp_easy' in args.questions_file:
-             output_questions_filename = f'beaver_sp_easy_opt{args.option}_preprocessed.json'
-         else:
-             output_questions_filename = f'beaver_sp_opt{args.option}_preprocessed.json'
-    else:
-         output_questions_filename = f'beaver_dw_opt{args.option}_preprocessed.json'
 
+    output_questions_filename = f'beaver_{args.dataset}_opt{args.option}_preprocessed.json'
     output_questions_path = osp.join(output_base_dir, output_questions_filename)
     
     print(f"\n[3/3] Converting questions with option {args.option}...")
@@ -540,6 +525,7 @@ if __name__ == '__main__':
             templates = json.load(f)
 
     dailsql_questions = convert_beaver_questions_to_dailsql_format(
+        args.dataset,
         beaver_questions_path, 
         output_questions_path,
         option=args.option,

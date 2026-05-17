@@ -117,7 +117,7 @@ conda activate dailsql
 cd eval/dailsql
 pip install -r requirements.txt
 python nltk_downloader.py
-pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
+python -m spacy download en_core_web_sm
 ```
 setup using `venv`:
 ```bash
@@ -126,7 +126,7 @@ python3 -m venv dailsql
 source dailsql/bin/activate
 pip install -r requirements.txt
 python nltk_downloader.py
-pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.5.0/en_core_web_sm-3.5.0-py3-none-any.whl
+python -m spacy download en_core_web_sm
 ```
 
 3. DIN-SQL (adapted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dinsql))
@@ -152,12 +152,12 @@ setup using `conda`:
 ```bash
 conda create -n fewshot python=3.10 -y
 conda activate fewshot
-cd eval/few-shot
+cd eval/fewshot
 pip install -r requirements.txt
 ```
 setup using `venv`:
 ```bash
-cd eval/few-shot
+cd eval/fewshot
 python3 -m venv fewshot
 source fewshot/bin/activate
 pip install -r requirements.txt

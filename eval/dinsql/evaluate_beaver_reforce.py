@@ -26,12 +26,6 @@ import threading
 import time
 import sys
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
-except ImportError:
-    pass
-
 
 def get_mysql_credentials(db_id, creds_path=None):
     """Get MySQL credentials from JSON file or environment variables."""

@@ -33,9 +33,9 @@ OPTION=$((SETTING + 1))
 
 # --- Load .env ---
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "${script_dir}/../.env" ]; then
+if [ -f "${script_dir}/../../.env" ]; then
     set -a
-    source "${script_dir}/../.env"
+    source "${script_dir}/../../.env"
     set +a
 fi
 
@@ -66,7 +66,7 @@ python preprocessed_data/beaver_preprocess.py \
     --option ${OPTION} \
     --questions_file ${BEAVER_QUESTIONS} \
     --tables_file ${BEAVER_TABLES} \
-    --split ${DATASET}
+    --dataset ${DATASET}
 
 if [ $? -ne 0 ]; then
     echo "Error during preprocessing. Exiting."

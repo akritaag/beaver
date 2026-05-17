@@ -13,13 +13,6 @@ import mysql.connector
 import csv
 import re
 import signal
-from pathlib import Path
-
-try:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
-except ImportError:
-    pass
 
 
 class TimeoutError(Exception):

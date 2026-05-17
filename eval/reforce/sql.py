@@ -11,12 +11,6 @@ import pandas as pd
 from func_timeout import func_timeout, FunctionTimedOut
 
 try:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
-except ImportError:
-    pass
-
-try:
     import mysql.connector
 except ImportError:
     import sys

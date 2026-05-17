@@ -5,7 +5,7 @@ import re
 import sqlite3
 import pandas as pd
 
-from transformers import AutoTokenizer
+# from transformers import AutoTokenizer
 from utils.enums import LLM
 from sql_metadata import Parser
 
