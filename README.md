@@ -89,89 +89,36 @@ These tables will then be provided to different text-to-SQL methods to generate 
 
 ## Text-to-SQL methods
 
-Each method has its own dependencies and environment requirements. You can manage these environments using either `conda` or `venv`.
-
+We consider four text-to-SQL methods:
 1. ReFoRCE (adapted from [this official ReFoRCE implementation](https://github.com/Snowflake-Labs/ReFoRCE/tree/o3/methods/ReFoRCE))
-
-setup using `conda`:
-```bash
-conda create -n reforce python=3.10 -y
-conda activate reforce
-cd eval/ReFoRCE
-pip install -r requirements.txt
-```
-setup using `venv`:
-```bash
-cd eval/ReFoRCE
-python3 -m venv reforce
-source reforce/bin/activate
-pip install -r requirements.txt
-```
-
 2. DAIL-SQL (adapted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dailsql))
-
-setup using `conda`:
-```bash
-conda create -n dailsql python=3.9 -y
-conda activate dailsql
-cd eval/dailsql
-pip install -r requirements.txt
-python nltk_downloader.py
-python -m spacy download en_core_web_sm
-```
-setup using `venv`:
-```bash
-cd eval/dailsql
-python3 -m venv dailsql
-source dailsql/bin/activate
-pip install -r requirements.txt
-python nltk_downloader.py
-python -m spacy download en_core_web_sm
-```
-
 3. DIN-SQL (adapted from [this Spider2 implementation](https://github.com/xlang-ai/Spider2/tree/main/spider2-lite/baselines/dinsql))
-
-setup using `conda`:
-```bash
-conda create -n dinsql python=3.13 -y
-conda activate dinsql
-cd eval/dinsql
-pip install -r requirements.txt
-```
-setup using `venv`:
-```bash
-cd eval/dinsql
-python3 -m venv dinsql
-source dinsql/bin/activate
-pip install -r requirements.txt
-```
-
 4. Few-shot
-<!-- The Few-shot baseline provides a standard prompt-based evaluation. -->
-setup using `conda`:
+
+### Environment
+
+You can manage these environments using either `conda` or `venv`.
+
 ```bash
-conda create -n fewshot python=3.10 -y
-conda activate fewshot
-cd eval/fewshot
+cd eval
+
+# Using `conda`
+conda create -n beaver-eval python=3.10 -y
+conda activate beaver-eval
+
+# Using `venv`
+python3 -m venv beaver-eval
+source beaver-eval/bin/activate
+
 pip install -r requirements.txt
-```
-setup using `venv`:
-```bash
-cd eval/fewshot
-python3 -m venv fewshot
-source fewshot/bin/activate
-pip install -r requirements.txt
+
+# To run the DAIL‑SQL method, please execute the following additional commands:
+python nltk_downloader.py
+python -m spacy download en_core_web_sm
 ```
 
-<!-- The database name is automatically determined from the `--dataset` argument — no need to create separate credential files per database. -->
+### SQL generation
 
-
-## Evaluation
-### Execution accuracy evaluation
-
-<!-- In the paper, we define five subtasks: multi-table retrieval, join key detection, column mapping, domain knowledge extraction, and query decomposition. We also provide annotations for these subtasks. We provide three settings of providing these annotations as oracle hints. -->
-
-<!-- ### Settings of subtask annotations -->
 All baselines can be executed using the `run.sh` script in their respective folders with named arguments:
 
 For example, to execute ReFoRCE,
@@ -184,7 +131,17 @@ cd eval/ReFoRCE
 - **Setting 1**: With hints for schema-linking subtasks. Includes gold tables, column mapping, and join keys.
 - **Setting 2**: With hints for all subtasks. Includes **Setting 1**, domain knowledge, and subqueries.
 
-### Unified Evaluation Structure
+<!-- The database name is automatically determined from the `--dataset` argument — no need to create separate credential files per database. -->
+
+
+## Evaluation
+
+<!-- In the paper, we define five subtasks: multi-table retrieval, join key detection, column mapping, domain knowledge extraction, and query decomposition. We also provide annotations for these subtasks. We provide three settings of providing these annotations as oracle hints. -->
+
+<!-- ### Settings of subtask annotations -->
+
+
+### Execution accuracy
 After generating the SQL predictions, the `run.sh` scripts will automatically execute a `unify.py` script. This executes both the predicted SQL and the gold SQL against the MySQL database and saves the outputs as CSV files inside `eval/output/unified/<baseline>/<run_name>/`. 
 
 To obtain the final evaluation metrics (exact set match over the CSVs), you must run the `unified_evaluation.py` script on the unified directory:

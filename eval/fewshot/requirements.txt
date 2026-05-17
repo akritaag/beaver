@@ -1,7 +1,0 @@
-tqdm
-openai
-python-dotenv
-pandas
-mysql-connector-python
-sql_metadata
-tabulate

@@ -1,0 +1,16 @@
+func_timeout
+numpy
+openai
+pandas
+spacy
+sqlglot
+tqdm
+mysql-connector-python
+python-dotenv
+sqlparse
+sql_metadata
+tabulate
+nltk
+tiktoken
+spacy
+torch

@@ -191,6 +191,7 @@ eval/fewshot/output
 eval/fewshot/fewshot
 
 eval/output/
+eval/beaver-eval
 
 !data/dw/example.json
 !data/dw/reranked_preds.json

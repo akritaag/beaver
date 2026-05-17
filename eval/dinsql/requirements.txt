@@ -1,4 +1,0 @@
-pandas
-tqdm
-mysql-connector-python
-openai

@@ -2,9 +2,9 @@ import sqlite3
 import io
 import csv
 from utils import hard_cut
-from google.cloud import bigquery
-from google.oauth2 import service_account
-import snowflake.connector
+# from google.cloud import bigquery
+# from google.oauth2 import service_account
+# import snowflake.connector
 import json
 import os
 import pandas as pd
