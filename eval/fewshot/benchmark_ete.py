@@ -1,8 +1,7 @@
-from tiger_utils import read_json
-from tiger_utils.model import system, user, assistant
 from tqdm import tqdm
+from pathlib import Path
 
-from utils import format_tables, EvalConfig, format_join
+from utils import read_json, format_tables, EvalConfig, format_join, system, user, assistant
 
 def get_mapping(mapping):
     desc = []
@@ -72,6 +71,18 @@ def get_user_prompt(
 
     return user("\n\n".join(desc))
 
+def get_retrieved_tables(dataset: str, data_dir="../../data"):
+    retrieved_tables_fn = Path(f"{data_dir}/{dataset}/retrieval/retrieved_tables.json")
+    reranked_tables_fn = Path(f"{data_dir}/{dataset}/retrieval/reranked_tables.json")
+
+    assert retrieved_tables_fn.exists()
+    
+    if reranked_tables_fn.exists():
+        print(f'Loading reranked tables from {reranked_tables_fn}')
+        return read_json(reranked_tables_fn)
+    
+    print(f'Loading retrieved tables from {retrieved_tables_fn}')
+    return read_json(retrieved_tables_fn)
 
 def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: str = "../../data"):
     structures = read_json(f"{data_dir}/template_structure.json")
@@ -80,7 +91,7 @@ def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: 
     dev_tables = read_json(f"{data_dir}/{dataset}/dev_tables.json")
 
     if not eval_config.gold_tables:
-        preds = read_json(f"{data_dir}/{dataset}/reranked_preds.json")
+        retrieved_tables = get_retrieved_tables(dataset)
 
     example_prompt = [
         get_user_prompt(example, example["tables"], dev_tables, eval_config),
@@ -90,20 +101,18 @@ def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: 
     prompts = []
     instance_ids = []
 
-    for q_idx, q in enumerate(tqdm(qs)):
-        # print(q_idx)
-
+    for q in tqdm(qs):
+        q_id = q['id']
         q_knowledge = eval_config.knowledge and get_knowledge(q['domain_knowledge']) != ''
         q_decomp = eval_config.decomp and get_decomp(q["sub_questions"]) != ""
 
         if eval_config.gold_tables:
             tables = q["tables"]
         else:
-            if str(q_idx) not in preds:
+            if q_id not in retrieved_tables:
                 prompts.append(None)
                 continue
-            pred = preds[str(q_idx)]
-            tables = pred[:eval_config.top_k]
+            tables = retrieved_tables[q_id]
 
         db_type = "MySQL"
 
@@ -146,7 +155,7 @@ def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: 
         prompt += [get_user_prompt(q, tables, dev_tables, eval_config)]
 
         prompts.append(prompt)
-        instance_ids.append(q.get("id", f"beaver_{dataset}_{q_idx:03d}"))
+        instance_ids.append(q_id)
 
     print(f"#prompts: {len(prompts)}")
     return prompts, instance_ids

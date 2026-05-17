@@ -34,9 +34,9 @@ EVAL_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DATA_DIR="$(cd "${SCRIPT_DIR}/../../data" && pwd)"
 
 # --- Load .env ---
-if [ -f "${EVAL_DIR}/.env" ]; then
+if [ -f "${EVAL_DIR}/../.env" ]; then
     set -a
-    source "${EVAL_DIR}/.env"
+    source "${EVAL_DIR}/../.env"
     set +a
 fi
 

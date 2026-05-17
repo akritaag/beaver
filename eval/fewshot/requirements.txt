@@ -1,11 +1,7 @@
 tqdm
-transformers
 openai
 python-dotenv
 pandas
 mysql-connector-python
-tiger_utils
 sql_metadata
-numpy
 tabulate
-torch
