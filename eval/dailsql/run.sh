@@ -53,6 +53,9 @@ COMMENT="beaver_${DATASET}_opt${OPTION}"
 BEAVER_QUESTIONS="../../data/${DATASET}/dev_sampled.json"
 BEAVER_TABLES="../../data/${DATASET}/dev_tables.json"
 
+TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+RUN_NAME="${MODEL}-beaver-${DATASET}-setting${SETTING}-log-${TIMESTAMP}"
+
 echo "========================================"
 echo "Running DAILSQL on ${DATASET} - Setting ${SETTING} (option ${OPTION})"
 echo "Model: ${MODEL}"
@@ -90,6 +93,7 @@ DEV_FILE="preprocessed_data/${DEV}/${DEV}_preprocessed.json"
 TABLES_FILE=${BEAVER_TABLES}
 
 python postprocessed_data/beaver_postprocess.py \
+    --dataset ${DATASET} \
     --option ${OPTION} \
     --model ${MODEL} \
     --comment ${COMMENT} \
@@ -102,6 +106,7 @@ echo ""
 echo "Step 5: Unifying generated SQLs..."
 python unify.py \
     --input_dir postprocessed_data/${COMMENT}_${DEV}_CTX-200/RESULTS_MODEL-${MODEL}-SQL \
+    --run_name $RUN_NAME \
     --gold_file ../../data/${DATASET}/dev_sampled.json \
     --dataset ${DATASET}
 

@@ -53,6 +53,9 @@ NUM_WORKERS=20
 BEAVER_QUESTIONS="../../data/${DATASET}/dev_sampled.json"
 BEAVER_TABLES="../../data/${DATASET}/dev_tables.json"
 
+TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+OUTPUT_PATH="output/${MODEL}-beaver-${DATASET}-setting${SETTING}-log-${TIMESTAMP}"
+
 echo "========================================================================"
 echo "DINSQL on ${DATASET} - Setting ${SETTING} (option ${OPTION})"
 echo "Model: ${MODEL}"
@@ -68,7 +71,7 @@ python3 preprocessed_data/beaver_preprocess_v2.py \
     --option ${OPTION} \
     --questions_file ${BEAVER_QUESTIONS} \
     --tables_file ${BEAVER_TABLES} \
-    --split ${DATASET}
+    --dataset ${DATASET}
 
 if [ $? -ne 0 ]; then
     echo "Error during preprocessing. Exiting."
@@ -87,7 +90,7 @@ python3 DIN-SQL-beaver-v2.py \
     --temperature 0 \
     --n 1 \
     --processes ${NUM_WORKERS} \
-    --output_dir "output/${MODEL}-beaver-${DATASET}-setting${SETTING}"
+    --output_dir $OUTPUT_PATH
 
 if [ $? -ne 0 ]; then
     echo "Error during SQL generation. Exiting."
@@ -100,7 +103,7 @@ echo "[Step 3/3] Unifying generated SQLs..."
 echo "------------------------------------------------------------------------"
 
 python3 unify.py \
-    --input_dir "output/${MODEL}-beaver-${DATASET}-setting${SETTING}" \
+    --input_dir $OUTPUT_PATH \
     --gold_file "../../data/${DATASET}/dev_sampled.json" \
     --dataset ${DATASET}
 

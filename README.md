@@ -134,7 +134,7 @@ conda activate beaver-eval
 # Using `venv`
 source beaver-eval/bin/activate
 
-python evaluate_ex_acc.py --dataset [dataset] --input_dir output/unified/[method]/[run_name]
+python evaluate_ex_acc.py --dataset [dataset] --input_dir unified-output/[method]/[run_name]
 ```
 *(This produces `summary_ex_acc.json` in the `input_dir`)*
 
@@ -144,6 +144,6 @@ We assess five subtasks: multi-table retrieval, join key detection, column mappi
 For each subtask (except query decomposition), we compare information extracted from the generated SQL with information extracted from the gold SQL using a specified LLM `model`. Query decomposition is evaluated via LLM-as-a-judge: the `model` scores how closely the structure of the generated SQL matches the gold query’s decomposition based on human‑designed rubrics.
 
 ```bash
-python evaluate_subtasks.py --dataset [dataset] --model [model] --input_dir output/unified/[method]/[run_name]
+python evaluate_subtasks.py --dataset [dataset] --model [model] --input_dir unified-output/[method]/[run_name]
 ```
 *(This produces `summary_subtasks.json` and detailed outputs in folder `subtask_eval/` in the `input_dir`)*

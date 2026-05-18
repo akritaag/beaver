@@ -155,7 +155,6 @@ def run_evaluation_task(sql_fn, gold_data, model, output_dir):
     except Exception as e:
         return {"status": f"init_exception: {e}"}
 
-# TODO: database name: nova, neutron, dw. no need to convert them back to csail_xxx_xxx
 def main():
     parser = argparse.ArgumentParser(description="Subtask evaluation")
     parser.add_argument("--input_dir", type=str)
