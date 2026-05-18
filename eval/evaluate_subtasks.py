@@ -5,15 +5,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from utils.llm import GPTChat
-from evaluate_extraction_subtasks import (
+from utils.evaluate_extraction_subtasks import (
     eval_extraction_output, EXTRACTION_PROMPT
 )
+from utils.utils import read_json, write_json
 
 load_dotenv('../.env')
-
-def write_json(obj, fn):
-    with open(fn, 'w') as f:
-        json.dump(obj, f, indent=2)
 
 PROMPT_TEMPLATE = """
 You are a strict SQL decomposition evaluator. Your job is to score how well the GENERATED_SQL reflects the intended QUERY DECOMPOSITION described by the REFERENCE_SUBQUESTION_SQLS.
@@ -106,8 +103,7 @@ def evaluate_single_entry(sql_fn: Path, gold_data, chat_client: GPTChat, output_
         output_file = output_dir / f"{q_id}.json"
         if output_file.exists():
             try:
-                with open(output_file, "r") as f:
-                    return json.load(f)
+                return read_json(output_file)
             except Exception as e:
                 print(f"File {output_file} corrupted? Re-evaluating. Error: {e}")
 
@@ -164,9 +160,8 @@ def main():
     args = parser.parse_args()
     
     gold_file = f'../data/{args.dataset}/dev.json'
-    with open(gold_file, "r") as f:
-        gold_data = json.load(f)
-        gold_data = {q['id']: q for q in gold_data}
+    gold_data = read_json(gold_file)
+    gold_data = {q['id']: q for q in gold_data}
     
     generated_sql_dir = Path(args.input_dir) / 'generated'
     generated_sql_fns = sorted(generated_sql_dir.glob('*.sql'))

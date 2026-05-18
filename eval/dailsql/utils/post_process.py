@@ -16,7 +16,7 @@ import tqdm
 
 proj_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
 sys.path = [osp.join(proj_dir, '../')] + sys.path
-from utils.post_utils import spider2_postprocess_single_sql
+# from utils.post_utils import spider2_postprocess_single_sql
 
 
 # process the case of duplicated output of ChatGPT and GPT4 for SQL Representation with QA or SQLONLY Organization

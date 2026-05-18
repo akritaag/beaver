@@ -8,20 +8,19 @@ This repository contains the evaluation code for the **BEAVER** text-to-SQL benc
 ## Repository Structure
 
 ```
-├── .env                                 # Credential file (API keys + MySQL password)
+├── .env                                 # Credential file (API keys + MySQL database password)
 ├── data/                                # Dataset files (e.g. metadata, questions, tables)
 │   ├── dw/                              # `dw` dataset
-│   │   ├── dev.json                     # Question file
-│   │   ├── dev_tables.json              # Tables metadata
-│   │   └── example.json                 # Few-shot examples
+│   │   ├── example.json                 # Few-shot examples
+│   │   └── ...                 
 │   └── ...                              # Other datasets
 ├── eval/                                # Evaluation methods and scripts
 │   ├── reforce/                         # ReFoRCE evaluation pipeline
 │   ├── fewshot/                         # Few-shot evaluation pipeline
 │   ├── dailsql/                         # DAIL-SQL evaluation pipeline
 │   ├── dinsql/                          # DIN-SQL evaluation pipeline
-│   ├── evaluate_decomposition.py        # Script for evaluating query decomposition subtask
-│   └── evaluate_extraction.py           # Script for evaluating other subtasks
+│   ├── evaluate_ex_acc.py               # Script for computing execution accuracy
+│   └── evaluate_subtasks.py             # Script for subtask evaluation
 └── retrieve/                            # Table retrieval
 ```
 
@@ -50,7 +49,7 @@ Our [gated dataset](https://huggingface.co/collections/beaverbench/beaver-datase
 python data/download_hf.py --sample [sample_size]
 ```
 
-For each of the four splits (`dw`, `nova`, `neutron`, `dw_real`), this script automatically downloads the datasets from Hugging Face and generates:
+For each of the four datasets (`dw`, `nova`, `neutron`, `dw_real`), this script automatically downloads the datasets from Hugging Face and generates:
 * `dev.json`: The full set of questions.
 * `dev_tables.json`: The full set of tables.
 * `dev_sampled.json`: A sampled subset of questions of size `sample_size` (default `100`) since running on the full dataset can be computationally expensive
@@ -106,14 +105,14 @@ python -m spacy download en_core_web_sm
 
 ### SQL generation
 
-All methods can be executed using the `run.sh` script in their respective folders. For example, to execute ReFoRCE,
+All methods can be executed using the `run.sh` script in their respective folders.
 ```bash
-cd eval/reforce
-./run.sh --model [model] --dataset [dataset] --setting {0|1|2}
+cd eval/[method]
+./run.sh --model [model] --dataset [dataset] --setting {0,1,2}
 ```
-- `model`: the LLM for generating the text-to-SQL (e.g., `gpt-5-mini`)
+- `model`: the LLM for SQL generation (e.g., `gpt-5-mini`)
 - `dataset`: one of `dw`, `dw_real`, `neutron`, `nova`
-- `setting=0` *(default setting)*: Standard end-to-end setting with no hints. Base information with only the top-k tables provided.
+- `setting=0` *(default setting)*: Standard end-to-end setting with no hints. Base information with only the top-k tables retrieved from [table retrieval](#table-retrieval).
 - `setting=1`: With hints for three schema-linking subtasks. Includes gold tables, column mapping, and join keys.
 - `setting=2`: With hints for all five subtasks. Includes three subtasks in `setting=1`, domain knowledge, and subquery decomposition.
 
@@ -136,14 +135,14 @@ source beaver-eval/bin/activate
 
 python evaluate_ex_acc.py --dataset [dataset] --input_dir unified-output/[method]/[run_name]
 ```
-*(This produces `summary_ex_acc.json` in the `input_dir`)*
+<!-- *(This produces `summary_ex_acc.json` in the `input_dir`)* -->
 
 ### Subtask evaluation
 We assess five subtasks: multi-table retrieval, join key detection, column mapping, domain knowledge extraction, and query decomposition.
 
-For each subtask (except query decomposition), we compare information extracted from the generated SQL with information extracted from the gold SQL using a specified LLM `model`. Query decomposition is evaluated via LLM-as-a-judge: the `model` scores how closely the structure of the generated SQL matches the gold query’s decomposition based on human‑designed rubrics.
+For each subtask (except query decomposition), we compare information extracted from the generated SQL (using a specified LLM `model`) with annotated information from the gold SQL. Query decomposition is evaluated via LLM-as-a-judge: the `model` scores how closely the structure of the generated SQL matches the gold query’s decomposition based on human‑designed rubrics.
 
 ```bash
 python evaluate_subtasks.py --dataset [dataset] --model [model] --input_dir unified-output/[method]/[run_name]
 ```
-*(This produces `summary_subtasks.json` and detailed outputs in folder `subtask_eval/` in the `input_dir`)*
+<!-- *(This produces `summary_subtasks.json` and detailed outputs in folder `subtask_eval/` in the `input_dir`)* -->

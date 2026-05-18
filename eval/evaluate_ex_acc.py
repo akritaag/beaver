@@ -8,7 +8,8 @@ from dotenv import load_dotenv
 
 load_dotenv('../.env')
 
-from ex_acc_utils import get_mysql_credentials, execute_sql_with_timeout, compare_results
+from utils.ex_acc import get_mysql_credentials, execute_sql_with_timeout, compare_results
+from utils.utils import write_json
 
 def main():
     parser = argparse.ArgumentParser(description="Unified evaluation script for text-to-SQL baselines")
@@ -89,23 +90,10 @@ def main():
             "gold_error": gold_err,
             "pred_error": pred_err
         })
-        
-    print("\n" + "=" * 80)
-    print("UNIFIED EVALUATION SUMMARY")
-    print("=" * 80)
-    print(f"Total queries evaluated: {total_attempted}")
-    print(f"Exact matches (including empty-gold matches): {total_score}")
     
     acc_including_empty = (100 * total_score / total_attempted) if total_attempted > 0 else 0.0
-    print(f"Accuracy including empty-gold matches: {acc_including_empty:.1f}%")
-
     if nonempty_gold_total > 0:
         acc_excluding_empty = 100 * nonempty_gold_score / nonempty_gold_total
-        print(f"Accuracy excluding empty-gold queries: {acc_excluding_empty:.1f}% ({nonempty_gold_score}/{nonempty_gold_total})")
-    else:
-        print("Accuracy excluding empty-gold queries: N/A (no non-empty gold cases)")
-    
-    print("=" * 80)
     
     # Save results summary
     summary_data = {
@@ -121,10 +109,11 @@ def main():
     }
     
     summary_path = Path(args.input_dir) / "summary_ex_acc.json"
-    with open(summary_path, "w") as f:
-        json.dump(summary_data, f, indent=4)
-        
-    print(f"Detailed evaluation summary saved to {summary_path}")
+    write_json(summary_data, summary_path)
+    
+    print(f"\nEvaluation Complete.")
+    print(f"Summary saved to: {summary_path}")
+    print(json.dumps(summary_data['metrics'], indent=2))
 
 if __name__ == "__main__":
     main()
