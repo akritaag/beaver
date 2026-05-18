@@ -1,11 +1,17 @@
-import os
 import json
 import argparse
-import glob
-import re
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv('../.env')
 
 from utils.llm import GPTChat
+from evaluate_extraction import eval_extraction_output, EXTRACTION_PROMPT
+
+def write_json(obj, fn):
+    with open(fn, 'w') as f:
+        json.dump(obj, f, indent=2)
 
 PROMPT_TEMPLATE = """
 You are a strict SQL decomposition evaluator. Your job is to score how well the GENERATED_SQL reflects the intended QUERY DECOMPOSITION described by the REFERENCE_SUBQUESTION_SQLS.
@@ -77,233 +83,155 @@ Do NOT include any extra keys. Do NOT include markdown. Do NOT include code bloc
 Now evaluate.
 """
 
-def evaluate_single_entry(subdir_path, gold_data, chat_client: GPTChat, output_base_dir):
-    result_info = {
-        "subdir": os.path.basename(subdir_path),
-        "score": 0,
-        "has_decomposition": False,
-        "status": "error"
+def get_q_id(sql_fn):
+    return str(sql_fn).split('/')[-1].replace('.sql', '')
+
+def evaluate_single_entry(sql_fn, gold_data, chat_client: GPTChat, output_dir: Path):
+    result = {
+        "sql_fn": str(sql_fn),
+        "status": "error",
+        "has_decomp": False,
+        "generated_sql": "",
+        "scores": {},
+        "extraction_output": None,
+        "decomp_output": None,
     }
 
     try:
-        subdir_name = os.path.basename(subdir_path)
-        
-        # Extract index
-        match = re.search(r'_(\d+)$', subdir_name)
-        if not match:
-            result_info["status"] = "error_no_index"
-            return result_info
-            
-        index = int(match.group(1))
-        
-        if index >= len(gold_data):
-            result_info["status"] = "error_index_out_of_range"
-            return result_info
+        q_id = get_q_id(sql_fn)
 
-        gold_entry = gold_data[index]
+        gold_entry = gold_data[q_id]
         reference_sqls = gold_entry.get("sub_sqls", [])
         
-        # Skip if no prompt decomposition
-        if not reference_sqls or len(reference_sqls) == 0:
-            result_info["status"] = "skipped_no_gold"
-            result_info["has_decomposition"] = False
-            return result_info
-            
-        result_info["has_decomposition"] = True
-        
-        # Resume Check
-        output_dir = os.path.join(output_base_dir, subdir_name)
-        output_file = os.path.join(output_dir, "judge_result.json")
-        
-        if os.path.exists(output_file):
+        # Reuse cached result
+        output_file = output_dir / f"{q_id}.json"
+        if output_file.exists():
             try:
                 with open(output_file, "r") as f:
-                    data = json.load(f)
-                    score = data.get("judgment", {}).get("score", 0)
-                    result_info["score"] = score
-                    result_info["status"] = "skipped_exists"
-                    return result_info
+                    return json.load(f)
             except Exception as e:
                 print(f"File {output_file} corrupted? Re-evaluating. Error: {e}")
 
         # Read Generated SQL
-        result_sql_path = os.path.join(subdir_path, "result.sql")
-        
-        # Fallback: look for any .sql file
-        if not os.path.exists(result_sql_path):
-            sql_files = glob.glob(os.path.join(subdir_path, "*.sql"))
-            if sql_files:
-                result_sql_path = sql_files[0]
-            else:
-                result_info["status"] = "error_no_result_sql"
-                return result_info
-            
-        with open(result_sql_path, "r") as f:
+        with open(sql_fn, "r") as f:
             generated_sql = f.read().strip()
-            
-        # Prompt
-        prompt = PROMPT_TEMPLATE.format(
-            generated_sql=generated_sql,
-            reference_subquestion_sqls=json.dumps(reference_sqls, indent=2)
-        )
-        
-        # LLM Call
-        response_json = chat_client.get_json_response(prompt)
-        
-        if response_json:
-            os.makedirs(output_dir, exist_ok=True)
-            
-            output_data = {
-                "generated_sql": generated_sql,
-                "reference_subquestion_sqls": reference_sqls,
-                "judgment": response_json
-            }
-            
-            with open(output_file, "w") as f:
-                json.dump(output_data, f, indent=4)
-                
-            result_info["score"] = response_json.get("score", 0)
-            result_info["status"] = "success"
-            # print(f"Processed {subdir_name}: Score {result_info['score']}")
-        else:
-            result_info["status"] = "error_llm_failure"
 
+        decomp_output = None
+        if not reference_sqls or len(reference_sqls) == 0:
+            result["has_decomp"] = False
+        else:
+            result["has_decomp"] = True
+            decomp_prompt = PROMPT_TEMPLATE.format(
+                generated_sql=generated_sql,
+                reference_subquestion_sqls=json.dumps(reference_sqls, indent=2)
+            )
+            decomp_output = chat_client.get_json_response(decomp_prompt)
+            result["decomp_output"] = decomp_output
+        
+        extraction_prompt = EXTRACTION_PROMPT.format(sql=generated_sql)
+        extraction_output = chat_client.get_json_response(extraction_prompt)
+
+        result["generated_sql"] = generated_sql
+        result["extraction_output"] = extraction_output
+        result["scores"] = {
+            **eval_extraction_output(extraction_output, gold_entry),
+            "query_decomposition_score": decomp_output.get("score", 0) if decomp_output else None
+        }
+        result["status"] = "success"
+        print(f"Processed {q_id}: Score {json.dumps(result['scores'], indent=2)}")
+
+        write_json(result, output_file)
     except Exception as e:
-        print(f"Error processing {subdir_path}: {e}")
+        print(f"Error processing {sql_fn}: {e}")
         import traceback
         traceback.print_exc()
-        result_info["status"] = f"exception: {str(e)}"
+        result["status"] = f"exception: {str(e)}"
 
-    return result_info
+    return result
 
-def run_evaluation_task(subdir, gold_data, model, output_dir):
+def run_evaluation_task(sql_fn, gold_data, model, output_dir):
     try:
         chat_client = GPTChat(model=model)
-        return evaluate_single_entry(subdir, gold_data, chat_client, output_dir)
+        return evaluate_single_entry(sql_fn, gold_data, chat_client, output_dir)
     except Exception as e:
-        return {
-            "subdir": os.path.basename(subdir),
-            "score": 0,
-            "has_decomposition": False,
-            "status": f"init_exception: {e}"
-        }
+        return {"status": f"init_exception: {e}"}
 
+# TODO: database name: nova, neutron, dw. no need to convert them back to csail_xxx_xxx
 def main():
-    parser = argparse.ArgumentParser(description="LLM-as-a-judge for SQL decomposition")
-    parser.add_argument("--input_dir", type=str, default="postprocessed_data/beaver_sp_opt2_beaver_sp_opt2_CTX-200/RESULTS_MODEL-anthropic/claude-sonnet-4.5-SQL")
-    parser.add_argument("--gold_file", type=str, default="../../data/sp/dev_sampled.json")
+    parser = argparse.ArgumentParser(description="Subtask evaluation")
+    parser.add_argument("--input_dir", type=str)
+    parser.add_argument("--dataset", type=str)
     parser.add_argument("--model", type=str, default="gpt-5-mini", help="LLM model to use")
-    parser.add_argument("--baseline_method", type=str, choices=["reforce", "dinsql", "dailsql", "fewshot"], default="reforce", help="Baseline method (controls output path structure)")
     parser.add_argument("--num_workers", type=int, default=40, help="Number of parallel workers")
-    parser.add_argument("--output_dir", type=str, default=None, help="Output directory") 
-    
     args = parser.parse_args()
     
-    print(f"Loading gold data from {args.gold_file}...")
-    with open(args.gold_file, "r") as f:
+    gold_file = f'../data/{args.dataset}/dev.json'
+    with open(gold_file, "r") as f:
         gold_data = json.load(f)
-        
-    subdirs = sorted(glob.glob(os.path.join(args.input_dir, "*")))
-    subdirs = [d for d in subdirs if os.path.isdir(d)]
+        gold_data = {q['id']: q for q in gold_data}
     
-    print(f"Found {len(subdirs)} subdirectories to evaluate.")
+    generated_sql_dir = Path(args.input_dir) / 'generated'
+    generated_sql_fns = sorted(generated_sql_dir.glob('*.sql'))
+    print(f"Found {len(generated_sql_fns)} generated SQLs to evaluate")
+    
+    output_dir = Path(args.input_dir) / 'subtask_eval'
+    output_dir.mkdir(exist_ok=True)
 
-    args.input_dir = args.input_dir.rstrip('/')
-    if args.output_dir is None:
-        if args.baseline_method == "reforce":
-            args.output_dir = os.path.join('ReFoRCE/output/judge', args.input_dir.split('/')[-1])
-        elif args.baseline_method == "dinsql":
-            if 'qwen' in args.input_dir or 'minimax' in args.input_dir or 'claude' in args.input_dir:
-                args.output_dir = os.path.join('dinsql/output/judge', '/'.join(args.input_dir.split('/')[-2:]))
-            else:
-                args.output_dir = os.path.join('dinsql/output/judge', args.input_dir.split('/')[-1])
-        elif args.baseline_method == "dailsql":
-            if 'qwen' in args.input_dir or 'minimax' in args.input_dir or 'claude' in args.input_dir:
-                args.output_dir = os.path.join('dailsql/output/judge', '/'.join(args.input_dir.split('/')[-3:]))
-            else:
-                args.output_dir = os.path.join('dailsql/output/judge', '/'.join(args.input_dir.split('/')[-2:]))
-        elif args.baseline_method == "fewshot":
-            args.output_dir = os.path.join('fewshot/output/judge', args.input_dir.split('/')[-1])
-    
-    os.makedirs(args.output_dir, exist_ok=True)
-    
     results = []
     
     try:
         from tqdm import tqdm
-        pbar = tqdm(total=len(subdirs))
+        pbar = tqdm(total=len(generated_sql_fns))
     except ImportError:
         pbar = None
     
     with ThreadPoolExecutor(max_workers=args.num_workers) as executor:
-        futures = []
-        for subdir in subdirs:
-            futures.append(
-                executor.submit(run_evaluation_task, subdir, gold_data, args.model, args.output_dir)
-            )
-            
-        for future in futures:
-            res = future.result()
+        futures = [
+            executor.submit(run_evaluation_task, generated_sql_fn, gold_data, args.model, output_dir)
+            for generated_sql_fn in generated_sql_fns
+        ]
+        for f in futures:
+            res = f.result()
             results.append(res)
-            
-            if pbar:
-                pbar.update(1)
-            elif len(results) % 20 == 0:
-                print(f"Processed {len(results)}/{len(subdirs)}")
+            if pbar: pbar.update(1)
 
-    if pbar:
-        pbar.close()
-        
-    # Calculate Summary Metrics
-    # 1. Logic for "sum(score)/ (#all questions ) * 5, use 0 if this question does not have a query decomposition"
-    # User might mean: Normalized Score = Sum(Scores) / (NumQuestions * 5).
-    # Since questions without decomposition are 0, they penalize the score.
+    if pbar: pbar.close()
     
-    total_questions = len(results)
-    sum_all_scores = sum(r["score"] for r in results)
-    
-    # Normalized score (0.0 to 1.0)
-    normalized_score_all = 0.0
-    if total_questions > 0:
-        normalized_score_all = sum_all_scores / (total_questions * 5)
-        
-    # Average score (0 to 5)
-    average_score_all = 0.0
-    if total_questions > 0:
-        average_score_all = sum_all_scores / total_questions
+    avg_scores = {
+        "avg_table_retrieval_f1": None,
+        "avg_column_mapping_f1": None,
+        "avg_join_key_f1": None,
+        "avg_domain_knowledge_f1": None,
+        "avg_query_decomposition_score": None
+    }
 
-    # 2. Logic for "average of all available score"
-    results_with_decomposition = [r for r in results if r["has_decomposition"]]
-    num_with_decomposition = len(results_with_decomposition)
-    sum_available_scores = sum(r["score"] for r in results_with_decomposition)
+    valid_results = [r for r in results if r["status"] == "success"]
+    valid_results_with_decomp = [r for r in results if r["status"] == "success" and r["has_decomp"]]
+
+    if len(valid_results) > 0:
+        avg_scores["avg_table_retrieval_f1"] = sum(r["scores"]["table_retrieval_f1"] for r in valid_results) / len(valid_results)
+        avg_scores["avg_column_mapping_f1"] = sum(r["scores"]["column_mapping_f1"] for r in valid_results) / len(valid_results)
+        avg_scores["avg_join_key_f1"] = sum(r["scores"]["join_key_f1"] for r in valid_results) / len(valid_results)
+        avg_scores["avg_domain_knowledge_f1"] = sum(r["scores"]["domain_knowledge_f1"] for r in valid_results) / len(valid_results)
     
-    average_score_available = 0.0
-    if num_with_decomposition > 0:
-        average_score_available = sum_available_scores / num_with_decomposition
-        
+    if len(valid_results_with_decomp) > 0:
+        avg_scores["avg_query_decomposition_score"] = sum(r["scores"]["query_decomposition_score"] for r in valid_results_with_decomp) / len(valid_results_with_decomp)
+        # the original decomp score is 0-5, divide by 5 to normalize
+        avg_scores["avg_query_decomposition_score"] /= 5
+
     summary = {
-        "metrics": {
-            "total_questions": total_questions,
-            "questions_with_decomposition": num_with_decomposition,
-            "sum_score_all": sum_all_scores,
-            "normalized_score_all_questions": normalized_score_all,
-            "average_score_all_questions": average_score_all,
-            "average_score_available_only": average_score_available
-        },
-        "results": results
+        "total_questions": len(results),
+        "total_valid_questions": len(valid_results),
+        "total_valid_questions_with_query_decomposition": len(valid_results_with_decomp),
+        **avg_scores
     }
     
-    summary_path = os.path.join(args.output_dir, "summary.json")
-    with open(summary_path, "w") as f:
-        json.dump(summary, f, indent=4)
-        
+    summary_path = Path(args.input_dir) / "subtask_summary.json"
+    write_json(summary, summary_path)
+
     print(f"\nEvaluation Complete.")
     print(f"Summary saved to: {summary_path}")
-    print(f"Total Questions: {total_questions}")
-    print(f"Questions w/ Decomposition: {num_with_decomposition}")
-    print(f"Average Score (All, 0-5): {average_score_all:.4f}")
-    print(f"Normalized Score (All, 0-1): {normalized_score_all:.4f}")
-    print(f"Average Score (Available Only, 0-5): {average_score_available:.4f}")
+    print(json.dumps(summary, indent=2))
 
 if __name__ == "__main__":
     main()

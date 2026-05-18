@@ -1,14 +1,4 @@
-import os
-import sys
-import json
-import argparse
-import glob
 import re
-import time
-from concurrent.futures import ThreadPoolExecutor
-from openai import OpenAI
-
-from utils.llm import GPTChat
 
 EXTRACTION_PROMPT = """
 You are an expert SQL parser. Your task is to extract specific components from the provided SQL query into a JSON format.
@@ -103,241 +93,72 @@ def compute_predicate_f1(generated_set, gold_set):
     
     return f1
 
-def evaluate_single_entry(subdir_path, gold_data, chat_client, output_base_dir):
-    result = {
-        "subdir": os.path.basename(subdir_path),
-        "status": "error",
-        "generated_sql": "",
-        "extraction": {},
-        "scores": {}
-    }
-
-    try:
-        subdir_name = os.path.basename(subdir_path)
-        
-        # Resume Check
-        output_dir = os.path.join(output_base_dir, subdir_name)
-        extraction_file = os.path.join(output_dir, "extraction.json")
-        call_llm = True
-        if os.path.exists(extraction_file):
-            try:
-                with open(extraction_file, "r") as f:
-                    existing_data = json.load(f)
-                if existing_data.get("status") == "success":
-                    call_llm = False
-            except Exception:
-                pass # If error reading, re-compute
-
-        match = re.search(r'_(\d+)$', subdir_name)
-        if not match: return result
-        index = int(match.group(1))
-        if index >= len(gold_data): return result
-
-        gold_entry = gold_data[index]
-        
-        # Gold Standards
-        gold_tables = gold_entry.get("tables", [])
-        
-        # Flatten mapping dict
-        gold_columns = []
-        if "mapping" in gold_entry:
-            for k, v in gold_entry["column_mapping"].items():
-                gold_columns.extend(v)
-                
-        # Flatten join_keys list of lists -> list of strings "A=B"
-        gold_joins = []
-        if "join_keys" in gold_entry:
-            for jk in gold_entry["join_keys"]:
-                # jk is often [col1, col2]
-                if isinstance(jk, list) and len(jk) == 2:
-                    gold_joins.append(f"{jk[0]} = {jk[1]}")
-                elif isinstance(jk, str):
-                    gold_joins.append(jk)
-
-        # Domain knowledge: evidence lists
-        gold_predicates = []
-        gold_predicates.extend(extract_predicates_from_evidence(gold_entry.get("domain_knowledge", [])))
-
-        # Read Generated SQL
-        result_sql_path = os.path.join(subdir_path, "result.sql")
-        
-        # Fallback: look for any .sql file
-        if not os.path.exists(result_sql_path):
-            sql_files = glob.glob(os.path.join(subdir_path, "*.sql"))
-            if sql_files:
-                result_sql_path = sql_files[0]
-            else:
-                result["status"] = "no_sql"
-                return result
-        
-        with open(result_sql_path, "r") as f:
-            generated_sql = f.read().strip()
-            result["generated_sql"] = generated_sql
-
-        # Extraction via LLM
-        if call_llm:
-            prompt = EXTRACTION_PROMPT.format(sql=generated_sql)
-            extraction = chat_client.get_json_response(prompt)
-        else:
-            extraction = existing_data.get("extraction")
-        
-        if not extraction:
-            result["status"] = "llm_error"
-            return result
+def eval_extraction_output(extraction_output, gold_entry):
+    # Gold Standards
+    gold_tables = gold_entry.get("tables", [])
+    
+    # Flatten mapping dict
+    gold_columns = []
+    if "mapping" in gold_entry:
+        for k, v in gold_entry["column_mapping"].items():
+            gold_columns.extend(v)
             
-        result["extraction"] = extraction
-        
-        # Compute F1s
-        # 1. Tables
-        f1_tables = compute_f1(extraction.get("tables", []), gold_tables)
-        
-        # 2. Columns
-        f1_columns = compute_f1(extraction.get("columns", []), gold_columns)
-        
-        # 3. Join Keys (Requires normalization)
-        gen_joins_norm = set([normalize_join_key(j) for j in extraction.get("join_keys", [])])
-        gold_joins_norm = set([normalize_join_key(j) for j in gold_joins])
-        
-        tp_j = len(gen_joins_norm.intersection(gold_joins_norm))
-        fp_j = len(gen_joins_norm - gold_joins_norm)
-        fn_j = len(gold_joins_norm - gen_joins_norm)
-        
-        prec_j = tp_j / (tp_j + fp_j) if (tp_j + fp_j) > 0 else 0
-        rec_j = tp_j / (tp_j + fn_j) if (tp_j + fn_j) > 0 else 0
-        f1_joins = 2 * (prec_j * rec_j) / (prec_j + rec_j) if (prec_j + rec_j) > 0 else 0
+    # Flatten join_keys list of lists -> list of strings "A=B"
+    gold_joins = []
+    if "join_keys" in gold_entry:
+        for jk in gold_entry["join_keys"]:
+            # jk is often [col1, col2]
+            if isinstance(jk, list) and len(jk) == 2:
+                gold_joins.append(f"{jk[0]} = {jk[1]}")
+            elif isinstance(jk, str):
+                gold_joins.append(jk)
 
-        # 4. Domain Knowledge (Predicates)
-        gen_predicates = set(extraction.get("domain_knowledge", []))
+    # Domain knowledge: evidence lists
+    gold_predicates = []
+    gold_predicates.extend(extract_predicates_from_evidence(gold_entry.get("domain_knowledge", [])))
 
-        clean_gen_predicates = set()
-        for p in gen_predicates:
-            if ' = ' in p:
-                clean_gen_predicates.add(p)
-            elif ' IN ' in p:
-                p = p.replace(' IN (', ' = ').replace(')', '')
-                clean_gen_predicates.add(p)
-            else:
-                pass
-        cleaned_gold_predicates = []
-        for p in gold_predicates:
-            # update p to remove ' IN (' and ')' in the list
+    # Compute F1s
+    # 1. Tables
+    f1_tables = compute_f1(extraction_output.get("tables", []), gold_tables)
+    
+    # 2. Columns
+    f1_columns = compute_f1(extraction_output.get("columns", []), gold_columns)
+    
+    # 3. Join Keys (Requires normalization)
+    gen_joins_norm = set([normalize_join_key(j) for j in extraction_output.get("join_keys", [])])
+    gold_joins_norm = set([normalize_join_key(j) for j in gold_joins])
+    
+    tp_j = len(gen_joins_norm.intersection(gold_joins_norm))
+    fp_j = len(gen_joins_norm - gold_joins_norm)
+    fn_j = len(gold_joins_norm - gen_joins_norm)
+    
+    prec_j = tp_j / (tp_j + fp_j) if (tp_j + fp_j) > 0 else 0
+    rec_j = tp_j / (tp_j + fn_j) if (tp_j + fn_j) > 0 else 0
+    f1_joins = 2 * (prec_j * rec_j) / (prec_j + rec_j) if (prec_j + rec_j) > 0 else 0
+
+    # 4. Domain Knowledge (Predicates)
+    gen_predicates = set(extraction_output.get("domain_knowledge", []))
+
+    clean_gen_predicates = set()
+    for p in gen_predicates:
+        if ' = ' in p:
+            clean_gen_predicates.add(p)
+        elif ' IN ' in p:
             p = p.replace(' IN (', ' = ').replace(')', '')
-            cleaned_gold_predicates.append(p)
-
-
-        f1_domain = compute_predicate_f1(clean_gen_predicates, cleaned_gold_predicates)
-        
-        scores = {
-            "f1_tables": f1_tables,
-            "f1_columns": f1_columns,
-            "f1_join_keys": f1_joins,
-            "f1_domain_knowledge": f1_domain
-        }
-        result["scores"] = scores
-        result["status"] = "success"
-        
-        # Save extraction detail
-        output_dir = os.path.join(output_base_dir, subdir_name)
-        os.makedirs(output_dir, exist_ok=True)
-        with open(os.path.join(output_dir, "extraction.json"), "w") as f:
-            json.dump(result, f, indent=4)
-            
-        return result
-
-    except Exception as e:
-        print(f"{subdir_path}: {e}")
-        return result
-
-def run_task(subdir, gold_data, model, output_dir):
-    client = GPTChat(model=model)
-    return evaluate_single_entry(subdir, gold_data, client, output_dir)
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input_dir", type=str, default="postprocessed_data/beaver_sp_opt2_beaver_sp_opt2_CTX-200/RESULTS_MODEL-anthropic/claude-sonnet-4.5-SQL")
-    parser.add_argument("--gold_file", type=str, default="../../data/sp/dev_sampled.json")
-    parser.add_argument("--model", type=str, default="gpt-5-mini")
-    parser.add_argument("--baseline_method", type=str, choices=["reforce", "dinsql", "dailsql", "fewshot"], default="reforce", help="Baseline method (controls output path structure)")
-    parser.add_argument("--output_dir", type=str, default="output/extractions")
-    parser.add_argument("--num_workers", type=int, default=40)
-    args = parser.parse_args()
-
-    print(f"Loading gold from {args.gold_file}")
-    with open(args.gold_file) as f: gold_data = json.load(f)
-
-    subdirs = sorted(glob.glob(os.path.join(args.input_dir, "*")))
-    subdirs = [d for d in subdirs if os.path.isdir(d)]
-    print(f"Subdirs: {len(subdirs)}")
-
-    
-
-    args.input_dir = args.input_dir.rstrip('/')
-    if args.baseline_method == "reforce":
-        output_dir = os.path.join(args.output_dir, args.input_dir.split('/')[-1])
-        output_dir = os.path.join("ReFoRCE", output_dir)
-    elif args.baseline_method == "dinsql":
-        if 'qwen' in args.input_dir or 'minimax' in args.input_dir or 'claude' in args.input_dir:
-            output_dir = os.path.join(args.output_dir, '/'.join(args.input_dir.split('/')[-2:]))
+            clean_gen_predicates.add(p)
         else:
-            output_dir = os.path.join(args.output_dir, args.input_dir.split('/')[-1])
-        output_dir = os.path.join("dinsql", output_dir)
-    elif args.baseline_method == "dailsql":
-        if 'qwen' in args.input_dir or 'minimax' in args.input_dir or 'claude' in args.input_dir:
-            output_dir = os.path.join(args.output_dir, '/'.join(args.input_dir.split('/')[-3:]))
-        else:
-            output_dir = os.path.join(args.output_dir, '/'.join(args.input_dir.split('/')[-2:]))
-        output_dir = os.path.join("dailsql", output_dir)
-    elif args.baseline_method == "fewshot":
-        output_dir = os.path.join(args.output_dir, args.input_dir.split('/')[-1])
-        output_dir = os.path.join("fewshot", output_dir)
-    os.makedirs(output_dir, exist_ok=True)
-    
-    results = []
-    
-    try:
-        from tqdm import tqdm
-        pbar = tqdm(total=len(subdirs))
-    except ImportError:
-        pbar = None
+            pass
+    cleaned_gold_predicates = []
+    for p in gold_predicates:
+        # update p to remove ' IN (' and ')' in the list
+        p = p.replace(' IN (', ' = ').replace(')', '')
+        cleaned_gold_predicates.append(p)
 
-    with ThreadPoolExecutor(max_workers=args.num_workers) as executor:
-        futures = [executor.submit(run_task, d, gold_data, args.model, output_dir) for d in subdirs]
-        for f in futures:
-            res = f.result()
-            results.append(res)
-            if pbar: pbar.update(1)
+    f1_domain = compute_predicate_f1(clean_gen_predicates, cleaned_gold_predicates)
 
-    if pbar: pbar.close()
-
-    # Calculate Totals for Summary
-    # Summary should just be a json that save each generated query's table... and the F1 scores
-    
-    avg_scores = {
-        "avg_f1_tables": 0.0,
-        "avg_f1_columns": 0.0,
-        "avg_f1_join_keys": 0.0,
-        "avg_f1_domain_knowledge": 0.0
+    return {
+        "table_retrieval_f1": f1_tables,
+        "column_mapping_f1": f1_columns,
+        "join_key_f1": f1_joins,
+        "domain_knowledge_f1": f1_domain
     }
-    
-    valid_results = [r for r in results if r["status"] == "success"]
-    n = len(valid_results)
-    
-    if n > 0:
-        avg_scores["avg_f1_tables"] = sum(r["scores"]["f1_tables"] for r in valid_results) / n
-        avg_scores["avg_f1_columns"] = sum(r["scores"]["f1_columns"] for r in valid_results) / n
-        avg_scores["avg_f1_join_keys"] = sum(r["scores"]["f1_join_keys"] for r in valid_results) / n
-        avg_scores["avg_f1_domain_knowledge"] = sum(r["scores"]["f1_domain_knowledge"] for r in valid_results) / n
-        
-    summary = {
-        "averages": avg_scores,
-        "details": results
-    }
-    
-    with open(os.path.join(output_dir, "summary.json"), "w") as f:
-        json.dump(summary, f, indent=4)
-        
-    print("\nDone.")
-    print(json.dumps(avg_scores, indent=2))
-
-if __name__ == "__main__":
-    main()
