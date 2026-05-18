@@ -1,67 +1,64 @@
- {
-    "question": "List the unique full room names, their corresponding building names, street addresses, cities, states, postal codes, and building heights for rooms associated with subjects that Computer Science students can enroll in.",
-    "db_id": "dw",
-    "sql": "SELECT DISTINCT fr.ROOM_FULL_NAME, b.BUILDING_NAME, b.BUILDING_STREET_ADDRESS, fba.CITY, fba.STATE, fba.POSTAL_CODE, fb.BUILDING_HEIGHT FROM COURSE_CATALOG_SUBJECT_OFFERED JOIN FCLT_ROOMS fr ON MEET_PLACE = FCLT_ROOM_KEY JOIN FCLT_BUILDING_ADDRESS fba ON fba.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN FCLT_BUILDING fb ON fb.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN BUILDINGS b ON b.BUILDING_KEY = fr.FCLT_BUILDING_KEY WHERE DEPARTMENT_NAME = 'Electrical Eng & Computer Sci' AND fba.ADDRESS_PURPOSE = 'STREET';",
-    "oracle_sql": "SELECT DISTINCT fr.ROOM_FULL_NAME, b.BUILDING_NAME, b.BUILDING_STREET_ADDRESS, fba.CITY, fba.STATE, fba.POSTAL_CODE, fb.BUILDING_HEIGHT FROM COURSE_CATALOG_SUBJECT_OFFERED JOIN FCLT_ROOMS fr ON MEET_PLACE = FCLT_ROOM_KEY JOIN FCLT_BUILDING_ADDRESS fba ON fba.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN FCLT_BUILDING fb ON fb.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN BUILDINGS b ON b.BUILDING_KEY = fr.FCLT_BUILDING_KEY WHERE DEPARTMENT_NAME = 'Electrical Eng & Computer Sci' AND fba.ADDRESS_PURPOSE = 'STREET';",
-    "gold_tables": [
-      "COURSE_CATALOG_SUBJECT_OFFERED",
-      "FCLT_ROOMS",
-      "FCLT_BUILDING_ADDRESS",
-      "FCLT_BUILDING",
-      "BUILDINGS"
+{
+  "question": "List the unique full room names, their corresponding building names, street addresses, cities, states, postal codes, and building heights for rooms associated with subjects that Computer Science students can enroll in.",
+  "db": "dw",
+  "sql": "SELECT DISTINCT fr.ROOM_FULL_NAME, b.BUILDING_NAME, b.BUILDING_STREET_ADDRESS, fba.CITY, fba.STATE, fba.POSTAL_CODE, fb.BUILDING_HEIGHT FROM COURSE_CATALOG_SUBJECT_OFFERED JOIN FCLT_ROOMS fr ON MEET_PLACE = FCLT_ROOM_KEY JOIN FCLT_BUILDING_ADDRESS fba ON fba.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN FCLT_BUILDING fb ON fb.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN BUILDINGS b ON b.BUILDING_KEY = fr.FCLT_BUILDING_KEY WHERE DEPARTMENT_NAME = 'Electrical Eng & Computer Sci' AND fba.ADDRESS_PURPOSE = 'STREET';",
+  "oracle_sql": "SELECT DISTINCT fr.ROOM_FULL_NAME, b.BUILDING_NAME, b.BUILDING_STREET_ADDRESS, fba.CITY, fba.STATE, fba.POSTAL_CODE, fb.BUILDING_HEIGHT FROM COURSE_CATALOG_SUBJECT_OFFERED JOIN FCLT_ROOMS fr ON MEET_PLACE = FCLT_ROOM_KEY JOIN FCLT_BUILDING_ADDRESS fba ON fba.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN FCLT_BUILDING fb ON fb.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN BUILDINGS b ON b.BUILDING_KEY = fr.FCLT_BUILDING_KEY WHERE DEPARTMENT_NAME = 'Electrical Eng & Computer Sci' AND fba.ADDRESS_PURPOSE = 'STREET';",
+  "tables": [
+    "COURSE_CATALOG_SUBJECT_OFFERED",
+    "FCLT_ROOMS",
+    "FCLT_BUILDING_ADDRESS",
+    "FCLT_BUILDING",
+    "BUILDINGS"
+  ],
+  "column_mapping": {
+    "full room names": [
+      "FCLT_ROOMS.ROOM_FULL_NAME"
     ],
-    "mapping": {
-      "full room names": [
-        "FCLT_ROOMS.ROOM_FULL_NAME"
-      ],
-      "building names": [
-        "BUILDINGS.BUILDING_NAME"
-      ],
-      "street addresses": [
-        "BUILDINGS.BUILDING_STREET_ADDRESS",
-        "FCLT_BUILDING_ADDRESS.ADDRESS_PURPOSE"
-      ],
-      "cities": [
-        "FCLT_BUILDING_ADDRESS.CITY"
-      ],
-      "states": [
-        "FCLT_BUILDING_ADDRESS.STATE"
-      ],
-      "postal codes": [
-        "FCLT_BUILDING_ADDRESS.POSTAL_CODE"
-      ],
-      "building heights": [
-        "FCLT_BUILDING.BUILDING_HEIGHT"
-      ],
-      "Computer Science": [
-        "COURSE_CATALOG_SUBJECT_OFFERED.DEPARTMENT_NAME"
-      ]
-    },
-    "join_keys": [
-      [
-        "COURSE_CATALOG_SUBJECT_OFFERED.MEET_PLACE",
-        "FCLT_ROOMS.FCLT_ROOM_KEY"
-      ],
-      [
-        "FCLT_BUILDING_ADDRESS.FCLT_BUILDING_KEY",
-        "FCLT_ROOMS.FCLT_BUILDING_KEY"
-      ],
-      [
-        "FCLT_BUILDING.FCLT_BUILDING_KEY",
-        "FCLT_ROOMS.FCLT_BUILDING_KEY"
-      ],
-      [
-        "BUILDINGS.BUILDING_KEY",
-        "FCLT_ROOMS.FCLT_BUILDING_KEY"
-      ]
+    "building names": [
+      "BUILDINGS.BUILDING_NAME"
     ],
-    "internal_evidence": [
-      "\"street address\" is predicated by \"TABLE.ADDRESS_PURPOSE = 'STREET'\"",
-      "\"Computer Science\" is predicated by \"TABLE.DEPARTMENT_NAME = 'Electrical Eng & Computer Sci'\""
+    "street addresses": [
+      "BUILDINGS.BUILDING_STREET_ADDRESS",
+      "FCLT_BUILDING_ADDRESS.ADDRESS_PURPOSE"
     ],
-    "external_evidence": [],
-    "doc_labels": [],
-    "doc_id": [],
-    "subquery_gold_questions": [],
-    "subquery_gold_queries": []
-  }
+    "cities": [
+      "FCLT_BUILDING_ADDRESS.CITY"
+    ],
+    "states": [
+      "FCLT_BUILDING_ADDRESS.STATE"
+    ],
+    "postal codes": [
+      "FCLT_BUILDING_ADDRESS.POSTAL_CODE"
+    ],
+    "building heights": [
+      "FCLT_BUILDING.BUILDING_HEIGHT"
+    ],
+    "Computer Science": [
+      "COURSE_CATALOG_SUBJECT_OFFERED.DEPARTMENT_NAME"
+    ]
+  },
+  "join_keys": [
+    [
+      "COURSE_CATALOG_SUBJECT_OFFERED.MEET_PLACE",
+      "FCLT_ROOMS.FCLT_ROOM_KEY"
+    ],
+    [
+      "FCLT_BUILDING_ADDRESS.FCLT_BUILDING_KEY",
+      "FCLT_ROOMS.FCLT_BUILDING_KEY"
+    ],
+    [
+      "FCLT_BUILDING.FCLT_BUILDING_KEY",
+      "FCLT_ROOMS.FCLT_BUILDING_KEY"
+    ],
+    [
+      "BUILDINGS.BUILDING_KEY",
+      "FCLT_ROOMS.FCLT_BUILDING_KEY"
+    ]
+  ],
+  "domain_knowledge": [
+    "\"street address\" is predicated by \"TABLE.ADDRESS_PURPOSE = 'STREET'\"",
+    "\"Computer Science\" is predicated by \"TABLE.DEPARTMENT_NAME = 'Electrical Eng & Computer Sci'\""
+  ],
+  "sub_questions": [],
+  "sub_sqls": []
+}

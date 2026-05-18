@@ -1,13 +1,13 @@
 {
   "question": "For each instance on host `blaze8-12` that is not deleted and has system metadata with the key `image_image_type`, return the instance UUID, the instance display name, the metadata value for that key, the number of network-info cache records for the instance, and the total memory (in MB) summed across those cache records.",
-  "db_id": "csail_stata_nova",
+  "db": "nova",
   "sql": "SELECT i.uuid AS instance_uuid, i.display_name, ism.value AS image_type_value, COUNT(iic.id) AS cache_record_count, SUM(i.memory_mb) AS total_memory_mb FROM instances i JOIN instance_system_metadata ism ON ism.instance_uuid = i.uuid JOIN instance_info_caches iic ON iic.instance_uuid = i.uuid WHERE i.deleted = 0 AND ism.key = 'image_image_type' AND i.host = 'blaze8-12' GROUP BY i.uuid, i.display_name, ism.value;",
-  "gold_tables": [
+  "tables": [
     "INSTANCE_SYSTEM_METADATA",
     "INSTANCES",
     "INSTANCE_INFO_CACHES"
   ],
-  "mapping": {
+  "column_mapping": {
     "instance (not deleted)": [
       "INSTANCES.DELETED"
     ],
@@ -40,12 +40,9 @@
       "INSTANCE_INFO_CACHES.INSTANCE_UUID"
     ]
   ],
-  "internal_evidence": [
+  "domain_knowledge": [
     "Host \"blaze8-12\" is predicated by \"instances.host = 'blaze8-12'\""
   ],
-  "external_evidence": [],
-  "doc_labels": [],
-  "doc_id": [],
-  "subquery_gold_questions": [],
-  "subquery_gold_queries": []
+  "sub_questions": [],
+  "sub_sqls": []
 }

@@ -1,6 +1,6 @@
 {
   "question": "List the unique full room names, their corresponding building names, street addresses, cities, states, postal codes, and building heights for rooms associated with subjects that Computer Science students can enroll in.",
-  "db_id": "dw",
+  "db": "dw",
   "sql": "SELECT DISTINCT fr.ROOM_FULL_NAME, b.BUILDING_NAME, b.BUILDING_STREET_ADDRESS, fba.CITY, fba.STATE, fba.POSTAL_CODE, fb.BUILDING_HEIGHT FROM COURSE_CATALOG_SUBJECT_OFFERED JOIN FCLT_ROOMS fr ON MEET_PLACE = FCLT_ROOM_KEY JOIN FCLT_BUILDING_ADDRESS fba ON fba.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN FCLT_BUILDING fb ON fb.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN BUILDINGS b ON b.BUILDING_KEY = fr.FCLT_BUILDING_KEY WHERE DEPARTMENT_NAME = 'Electrical Eng & Computer Sci' AND fba.ADDRESS_PURPOSE = 'STREET';",
   "oracle_sql": "SELECT DISTINCT fr.ROOM_FULL_NAME, b.BUILDING_NAME, b.BUILDING_STREET_ADDRESS, fba.CITY, fba.STATE, fba.POSTAL_CODE, fb.BUILDING_HEIGHT FROM COURSE_CATALOG_SUBJECT_OFFERED JOIN FCLT_ROOMS fr ON MEET_PLACE = FCLT_ROOM_KEY JOIN FCLT_BUILDING_ADDRESS fba ON fba.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN FCLT_BUILDING fb ON fb.FCLT_BUILDING_KEY = fr.FCLT_BUILDING_KEY JOIN BUILDINGS b ON b.BUILDING_KEY = fr.FCLT_BUILDING_KEY WHERE DEPARTMENT_NAME = 'Electrical Eng & Computer Sci' AND fba.ADDRESS_PURPOSE = 'STREET';",
   "tables": [
@@ -59,6 +59,6 @@
     "\"street address\" is predicated by \"TABLE.ADDRESS_PURPOSE = 'STREET'\"",
     "\"Computer Science\" is predicated by \"TABLE.DEPARTMENT_NAME = 'Electrical Eng & Computer Sci'\""
   ],
-  "subquery_gold_questions": [],
-  "subquery_gold_queries": []
+  "sub_questions": [],
+  "sub_sqls": []
 }
