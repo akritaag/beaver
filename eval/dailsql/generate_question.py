@@ -12,8 +12,6 @@ from prompt.prompt_builder import prompt_factory
 from utils.data_builder import Spider2CForDailSQL_Dataset
 from utils.enums import REPR_TYPE, EXAMPLE_TYPE, SELECTOR_TYPE, LLM
 from utils.utils import cost_estimate
-import multiprocessing as mp
-from multiprocessing import Pool
 from tqdm import tqdm
 
 proj_dir = osp.dirname(osp.abspath(__file__))
