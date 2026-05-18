@@ -521,7 +521,7 @@ def load_data(DATASET):
     return pd.read_json(DATASET)
 
 def hard_prompt_maker(row, schema_links, sub_questions, spider_schema, spider_foreign, args, table_filter=None):
-    test_sample_text, db_names = row['question'], row['db_id']
+    test_sample_text, db_names = row['question'], row['db']
 
     # done: support multi-db
     if isinstance(db_names, str):
@@ -563,7 +563,7 @@ def hard_prompt_maker(row, schema_links, sub_questions, spider_schema, spider_fo
 
 
 def medium_prompt_maker(row, schema_links, spider_schema, spider_foreign, args, table_filter=None):
-    test_sample_text, db_names = row['question'], row['db_id']
+    test_sample_text, db_names = row['question'], row['db']
 
     # done: support multi-db
     if isinstance(db_names, str):
@@ -715,7 +715,7 @@ def creating_schema(DATASET_JSON):
     p_keys = []
     for index, row in schema_df.iterrows():
         tables = row['table_names_original']
-        col_names = row['column_names_original']
+        col_names = row['column_names']
         col_types = row['column_types']
         foreign_keys = row['foreign_keys']
         primary_keys = row['primary_keys']
@@ -723,17 +723,17 @@ def creating_schema(DATASET_JSON):
             index, col_name = col
             if index == -1:
                 for table in tables:
-                    schema.append([row['db_id'], table, '*', 'text'])
+                    schema.append([row['db'], table, '*', 'text'])
             else:
-                schema.append([row['db_id'], tables[index], col_name, col_type])
+                schema.append([row['db'], tables[index], col_name, col_type])
         for primary_key in primary_keys:
             index, column = col_names[primary_key]
-            p_keys.append([row['db_id'], tables[index], column])
+            p_keys.append([row['db'], tables[index], column])
         for foreign_key in foreign_keys:
             first, second = foreign_key
             first_index, first_column = col_names[first]
             second_index, second_column = col_names[second]
-            f_keys.append([row['db_id'], tables[first_index], tables[second_index], first_column, second_column])
+            f_keys.append([row['db'], tables[first_index], tables[second_index], first_column, second_column])
     spider_schema = pd.DataFrame(schema, columns=['Database name', ' Table Name', ' Field Name', ' Type'])
     spider_primary = pd.DataFrame(p_keys, columns=['Database name', 'Table Name', 'Primary Key'])
     spider_foreign = pd.DataFrame(f_keys,
@@ -968,7 +968,7 @@ def multi_processing_process_row(index, row, args, output_dir, spider_schema, sp
     while schema_links is None:
         try:
             res = GPT4o_generation(
-                schema_linking_prompt_maker(row['question'], row['db_id'], spider_schema, spider_foreign))  # done: support multi-db
+                schema_linking_prompt_maker(row['question'], row['db'], spider_schema, spider_foreign))  # done: support multi-db
             assert len(res['response']) == 1
             schema_links = res['response'][0]
         except Exception as e:
@@ -986,7 +986,7 @@ def multi_processing_process_row(index, row, args, output_dir, spider_schema, sp
     while classification is None:
         try:
             res = GPT4o_generation(
-                classification_prompt_maker(row['question'], row['db_id'], schema_links[1:], spider_schema, spider_foreign))  # done: support multi-db
+                classification_prompt_maker(row['question'], row['db'], schema_links[1:], spider_schema, spider_foreign))  # done: support multi-db
             assert len(res['response']) == 1
             classification = res['response'][0]
         except Exception as e:
@@ -1043,7 +1043,7 @@ def multi_processing_process_row(index, row, args, output_dir, spider_schema, sp
         debugged_SQL = None
         while debugged_SQL is None:
             try:
-                res = GPT4o_debug(debuger(row['question'], row['db_id'], sql, spider_schema, spider_primary, spider_foreign))
+                res = GPT4o_debug(debuger(row['question'], row['db'], sql, spider_schema, spider_primary, spider_foreign))
                 assert len(res['response']) == 1
                 debugged_SQL = res['response'][0]
             except Exception as e:
@@ -1052,7 +1052,7 @@ def multi_processing_process_row(index, row, args, output_dir, spider_schema, sp
 
         debugged_SQL = debugged_SQL.replace("\n", " ").replace('```sql', '').replace('```', '').strip()
 
-        output_file = os.path.join(output_dir, f"{row['instance_id']}@{idx}.sql")
+        output_file = os.path.join(output_dir, f"{row['id']}@{idx}.sql")
         with open(output_file, 'w') as f:
             f.write(debugged_SQL)
     return index
@@ -1074,7 +1074,7 @@ if __name__ == '__main__':
     
     with Pool(processes=args.processes) as pool:
         with tqdm(total=val_df.shape[0]) as pbar:
-            inputs = [(index, row, args, output_dir, spider_schema, spider_primary, spider_foreign) for index, row in val_df.iterrows() if row['instance_id'] not in pred_ids]
+            inputs = [(index, row, args, output_dir, spider_schema, spider_primary, spider_foreign) for index, row in val_df.iterrows() if row['id'] not in pred_ids]
             print(f"Number of data samples to predict: {len(inputs)}")
             for _ in pool.starmap(
                 multi_processing_process_row, 

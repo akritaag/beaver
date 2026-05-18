@@ -145,7 +145,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_tokens', type=int, default=1000)
     parser.add_argument('--post_mode', type=str, choices=['pass@n', 'consistency@n', 'consistency-from-generated-pass@n', None], default=None)
     parser.add_argument("--is_sql_debug", action="store_true", default=False)
-    parser.add_argument("--processes", type=int, default=120)  # New argument for specifying the number of processes
+    parser.add_argument("--processes", type=int, default=16)  # New argument for specifying the number of processes
     parser.add_argument("--override", action="store_true")
     args = parser.parse_args()
 
@@ -171,10 +171,10 @@ if __name__ == '__main__':
         pred_ids = [file.split(".")[0].split("@")[0] for file in os.listdir(submit_folder) if file.endswith(".sql")]
         pred_ids = set(pred_ids)
     questions_json = json.load(open(os.path.join(args.question, QUESTION_FILE), "r"))
-    questions = [{"prompt": item["prompt"], "instance_id": item["instance_id"]} for item in questions_json["questions"] \
-        if item["instance_id"] not in pred_ids]
-    db_ids = [item["db_id"] for item in questions_json["questions"] \
-        if item["instance_id"] not in pred_ids]
+    questions = [{"prompt": item["prompt"], "instance_id": item.get("id", item.get("instance_id"))} for item in questions_json["questions"] \
+        if item.get("id", item.get("instance_id")) not in pred_ids]
+    db_ids = [item.get("db", item.get("db_id")) for item in questions_json["questions"] \
+        if item.get("id", item.get("instance_id")) not in pred_ids]
 
     question_loader = DataLoader(questions, batch_size=args.batch_size, shuffle=False, drop_last=False)
 

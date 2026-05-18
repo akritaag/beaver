@@ -57,7 +57,7 @@ class BasicICLPrompt(object):
                 example_question = example["question"]
                 # assert example_question != question, f"Example is the same with target question: {question}!, \n{target}\n{example}"
                 if cross_domain:
-                    assert target["db_id"] != example["db_id"]
+                    assert target["db"] != example["db"]
 
                 example_format = self.format_example(example)
                 
@@ -93,5 +93,5 @@ class BasicICLPrompt(object):
             "prompt": prompt,
             "response": response_clean, 
             "n_examples": n_valid_example,
-            "db_id": target["db_id"]
+            "db_id": target["db"]
         }

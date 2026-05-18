@@ -34,9 +34,9 @@ OPTION=$((SETTING + 1))
 
 # --- Load .env ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "${SCRIPT_DIR}/../.env" ]; then
+if [ -f "${SCRIPT_DIR}/../../.env" ]; then
     set -a
-    source "${SCRIPT_DIR}/../.env"
+    source "${SCRIPT_DIR}/../../.env"
     set +a
 fi
 
@@ -48,12 +48,17 @@ NUM_VOTES=8
 NUM_WORKERS=16
 
 # Export DB name for sql.py env-var fallback
-export MYSQL_DATABASE="${DATASET}"
+DB_NAME="${DATASET}"
+if [ "${DATASET}" == "dw_real" ]; then
+    DB_NAME="dw"
+fi
+export MYSQL_DATABASE="${DB_NAME}"
 
 # --- Preprocessing ---
 mkdir -p "preprocessed_data/${DATASET}"
 
 python convert_beaver_to_reforce.py \
+    --dataset "${DATASET}" \
     --beaver_questions "../../data/${DATASET}/dev_sampled.json" \
     --beaver_tables "../../data/${DATASET}/dev_tables.json" \
     --output "preprocessed_data/${DATASET}/beaver_${DATASET}_opt${OPTION}_sampled.json" \
@@ -90,6 +95,7 @@ python run.py \
     --early_stop \
     --do_vote \
     --num_votes $NUM_VOTES \
+    --option ${OPTION} \
     --num_workers $NUM_WORKERS
 
 echo ""
@@ -118,6 +124,7 @@ python run.py \
     --early_stop \
     --do_vote \
     --num_votes $NUM_VOTES \
+    --option ${OPTION} \
     --num_workers $NUM_WORKERS \
     --rerun \
     --overwrite_unfinished
@@ -141,6 +148,7 @@ python run.py \
     --do_vote \
     --random_vote_for_tie \
     --num_votes $NUM_VOTES \
+    --option ${OPTION} \
     --num_workers $NUM_WORKERS
 
 echo ""
@@ -163,6 +171,7 @@ python run.py \
     --random_vote_for_tie \
     --final_choose \
     --num_votes $NUM_VOTES \
+    --option ${OPTION} \
     --num_workers $NUM_WORKERS
 
 echo ""
@@ -175,7 +184,15 @@ python evaluate_beaver.py \
 
 echo ""
 echo "========================================"
-echo "ReFoRCE Beaver ${DATASET} Setting ${SETTING} - Complete!"
+echo "ReFoRCE Beaver ${DATASET} Setting ${SETTING} - Generation Complete!"
 echo "========================================"
 echo "Results saved to: $OUTPUT_PATH"
 echo "Gold results saved to: $GOLD_RESULT_PATH"
+
+echo ""
+echo "Step 5: Unifying generated SQLs..."
+echo "========================================"
+python unify.py \
+    --input_dir $OUTPUT_PATH \
+    --gold_file $DATA_FILE \
+    --dataset $DATASET

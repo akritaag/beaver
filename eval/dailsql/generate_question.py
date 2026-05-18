@@ -35,7 +35,7 @@ def process_question(question_json, args, cross_domain):
     try:
         # assert 1 != 1, "This is a test"
         # Setup logging for this question
-        instance_id = question_json.get('instance_id', 'unknown')
+        instance_id = question_json.get('id', 'unknown')
         log_dir = os.path.join(args.output_dir, 'logs') if hasattr(args, 'output_dir') else 'logs'
         os.makedirs(log_dir, exist_ok=True)
         log_file = os.path.join(log_dir, f"{instance_id}.log")
@@ -49,7 +49,7 @@ def process_question(question_json, args, cross_domain):
         
         logger.info("="*80)
         logger.info(f"Generating prompt for question: {instance_id}")
-        logger.info(f"Database: {question_json.get('db_id', 'unknown')}")
+        logger.info(f"Database: {question_json.get('db', 'unknown')}")
         logger.info("="*80)
         
         question_format = prompt.format(target=question_json,
@@ -58,7 +58,7 @@ def process_question(question_json, args, cross_domain):
                                         scope_factor=args.scope_factor,
                                         cross_domain=cross_domain, 
                                         args=args)
-        question_format['instance_id'] = question_json['instance_id'] 
+        question_format['id'] = question_json['id'] 
         
         logger.info(f"[Generated Prompt]\n{question_format.get('prompt', 'N/A')}\n[End Generated Prompt]")
         logger.info(f"[Prompt Tokens]: {question_format.get('prompt_tokens', 'N/A')}")
@@ -185,12 +185,12 @@ if __name__ == '__main__':
                                           scope_factor=args.scope_factor,
                                           cross_domain=cross_domain, 
                                           args=args)
-            question_format['instance_id'] = question_json['instance_id'] 
+            question_format['id'] = question_json.get('id', question_json.get('instance_id'))
             questions.append(question_format)
             token_cnt += question_format["prompt_tokens"]
         except Exception as e:
             import traceback
-            print(f"Error processing question {question_json.get('instance_id', 'unknown')}: {str(e)}")
+            print(f"Error processing question {question_json.get('id', 'unknown')}: {str(e)}")
             print(f"Traceback: {traceback.format_exc()}")
             continue
     

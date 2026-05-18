@@ -1,6 +1,5 @@
 import json
 import pandas as pd
-from dataclasses import dataclass
 
 def read_json(fn):
     with open(fn) as f:
@@ -10,10 +9,17 @@ def write_json(obj, fn):
     with open(fn, 'w') as f:
         json.dump(obj, f, indent=2)
 
-def format_join(join_pair):
-    """Format join pair for display."""
-    left, right = join_pair
-    return f"{left.split('.')[0]} joins {right.split('.')[0]} on {left} = {right}"
+def cosine_sim(A, B):
+    import torch
+
+    # Normalize A and B row-wise
+    A_norm = A / A.norm(dim=1, keepdim=True)
+    B_norm = B / B.norm(dim=1, keepdim=True)
+
+    # Compute cosine similarity: A_norm @ B_norm.T
+    cosine_sim = torch.mm(A_norm, B_norm.T)
+
+    return cosine_sim
 
 def format_table(table_name, corpus_tables, use_instance: bool, corpus_markdowns=None, trim=False):
     rows = corpus_tables[table_name]["example_rows"]
@@ -21,7 +27,7 @@ def format_table(table_name, corpus_tables, use_instance: bool, corpus_markdowns
         for row in rows:
             for i in range(len(row)):
                 if isinstance(row[i], str):
-                    # 500
+                    # trim long strings to first 500 chars
                     row[i] = row[i][:500]
 
     cols = corpus_tables[table_name]["column_names"]
@@ -38,7 +44,7 @@ def format_table(table_name, corpus_tables, use_instance: bool, corpus_markdowns
     table_string.append(f"Example table content:\n{df_md}")
 
     if use_instance:
-        instances = corpus_tables[table_name]["example_columns"]
+        instances = corpus_tables[table_name]["instances"]
         table_string.append(f"Top-10 most occurring values for each column:")
         for col_idx, col_name in enumerate(cols):
             _instance = " | ".join([str(x) for x in instances[col_idx]])
@@ -47,28 +53,3 @@ def format_table(table_name, corpus_tables, use_instance: bool, corpus_markdowns
     table_string = "\n".join(table_string)
 
     return table_string
-
-def format_tables(tables: list[str], corpus_tables, use_instance, corpus_markdowns=None):
-    p = []
-    for t in tables:
-        p.append(format_table(t, corpus_tables, use_instance, corpus_markdowns))
-    p = "\n\n".join(p)
-    return p
-
-@dataclass
-class EvalConfig:
-    gold_tables: bool
-    join_keys: bool
-    mapping: bool
-    knowledge: bool
-    decomp: bool
-    instances: bool = False
-
-def system(content: str):
-    return {"role": "system", "content": content}
-
-def user(content: str):
-    return {"role": "user", "content": content}
-
-def assistant(content: str):
-    return {"role": "assistant", "content": content}

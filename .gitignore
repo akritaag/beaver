@@ -160,17 +160,18 @@ cython_debug/
 #.idea/
 
 .DS_Store
-data/dw/
-data/dw_real/
-data/sp/
-data/sp_real/
-data/sp_easy/
-data/nova/
-data/neutron/
+data/dw/*
+data/dw_real/*
+data/sp/*
+data/sp_real/*
+data/sp_easy/*
+data/nova/*
+data/neutron/*
 
 
-eval/ReFoRCE/output/
-eval/ReFoRCE/preprocessed_data/
+eval/reforce/output/
+eval/reforce/preprocessed_data/
+eval/reforce/reforce/
 
 # sql credential
 eval/*.json
@@ -178,11 +179,23 @@ eval/*.json
 eval/dinsql/preprocessed_data/*/
 eval/dinsql/output
 eval/dinsql/postprocessed_data/*/
+eval/dinsql/dinsql
+
 # eval/dailsql
 eval/dailsql/postprocessed_data/*/
 eval/dailsql/preprocessed_data/*/
 eval/dailsql/output
+eval/dailsql/dailsql
 
-eval/Few-shot/output
+eval/fewshot/output
+eval/fewshot/fewshot
+
+eval/unified-output/
+eval/beaver-eval
+
+!data/dw/example.json
+!data/dw_real/example.json
+!data/nova/example.json
+!data/neutron/example.json
 
 .vscode/

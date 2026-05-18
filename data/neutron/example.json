@@ -1,0 +1,42 @@
+{
+  "question": "Count the number of ports on network ID `0a1d0a27-cffa-4de3-92c5-9d3fd3f2e74d` that are bound to a QoS policy and also have a DVR port binding where the port is administratively up and the DVR binding status is DOWN.",
+  "db": "neutron",
+  "sql": "SELECT COUNT(*) AS qos_bound_admin_up_down_dvr_ports FROM QOS_PORT_POLICY_BINDINGS qppb JOIN PORTS p ON qppb.PORT_ID = p.ID JOIN ML2_DVR_PORT_BINDINGS dvr ON p.ID = dvr.PORT_ID WHERE p.ADMIN_STATE_UP = 1 AND dvr.STATUS = 'DOWN' AND p.NETWORK_ID IN ('0a1d0a27-cffa-4de3-92c5-9d3fd3f2e74d');",
+  "tables": [
+    "QOS_PORT_POLICY_BINDINGS",
+    "PORTS",
+    "ML2_DVR_PORT_BINDINGS"
+  ],
+  "column_mapping": {
+    "number of ports": [
+      "QOS_PORT_POLICY_BINDINGS.PORT_ID"
+    ],
+    "ports bound to a QoS policy": [
+      "QOS_PORT_POLICY_BINDINGS.PORT_ID"
+    ],
+    "DVR port binding": [
+      "ML2_DVR_PORT_BINDINGS.PORT_ID"
+    ],
+    "port administratively up": [
+      "PORTS.ADMIN_STATE_UP"
+    ],
+    "DVR binding status DOWN": [
+      "ML2_DVR_PORT_BINDINGS.STATUS"
+    ]
+  },
+  "join_keys": [
+    [
+      "QOS_PORT_POLICY_BINDINGS.PORT_ID",
+      "PORTS.ID"
+    ],
+    [
+      "PORTS.ID",
+      "ML2_DVR_PORT_BINDINGS.PORT_ID"
+    ]
+  ],
+  "domain_knowledge": [
+    "Network ID \"0a1d0a27-cffa-4de3-92c5-9d3fd3f2e74d\" is predicated by \"ports.network_id IN ('0a1d0a27-cffa-4de3-92c5-9d3fd3f2e74d')\""
+  ],
+  "sub_questions": [],
+  "sub_sqls": []
+}

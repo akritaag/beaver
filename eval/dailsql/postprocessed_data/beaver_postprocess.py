@@ -13,13 +13,6 @@ import mysql.connector
 import csv
 import re
 import signal
-from pathlib import Path
-
-try:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
-except ImportError:
-    pass
 
 
 class TimeoutError(Exception):
@@ -33,7 +26,7 @@ proj_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
 sys.path = [osp.join(proj_dir, '../')] + sys.path
 
 
-def load_mysql_credentials(credential_path, db_id=None):
+def load_mysql_credentials(credential_path, dataset=None):
     """Load MySQL credentials from JSON file or environment variables."""
     if credential_path and os.path.exists(credential_path):
         with open(credential_path, 'r') as f:
@@ -42,10 +35,10 @@ def load_mysql_credentials(credential_path, db_id=None):
     host = os.environ.get("MYSQL_HOST")
     user = os.environ.get("MYSQL_USER")
     password = os.environ.get("MYSQL_PASSWORD")
-    if db_id == "neutron":
-        db_id = "csail_stata_neutron"
-    elif db_id == "nova":
-        db_id = "csail_stata_nova"
+    if dataset == "dw_real":
+        db_id = "dw"
+    else:
+        db_id = dataset
     if host and user and password:
         return {"host": host, "user": user, "password": password, "database": db_id}
     raise FileNotFoundError(f"MySQL credentials not found at '{credential_path}' and MYSQL_HOST/USER/PASSWORD env vars not set.")
@@ -186,11 +179,12 @@ def postprocess_sql(sql, schema_tables=None):
     return sql
 
 
-def main_postprocess(root_path, dev_json, mysql_credential_path, option, tables_json_path=None):
+def main_postprocess(dataset, root_path, dev_json, mysql_credential_path, option, tables_json_path=None):
     """
     Main postprocessing function for Beaver dataset
     
     Args:
+        dataset: dataset
         root_path: Directory containing LLM-generated SQL files
         dev_json: Path to preprocessed questions JSON
         mysql_credential_path: Path to MySQL credentials JSON
@@ -212,7 +206,7 @@ def main_postprocess(root_path, dev_json, mysql_credential_path, option, tables_
             # Beaver format
             for table_key, table_info in tables_data.items():
                 if 'table_name_original' in table_info:
-                    schema_tables.append(table_info['table_name_original'])
+                    schema_tables.append(table_info['table_name'])
                 else:
                      schema_tables.append(table_key)
         
@@ -224,11 +218,9 @@ def main_postprocess(root_path, dev_json, mysql_credential_path, option, tables_
     print("=" * 70)
     print(f"BEAVER POSTPROCESSING FOR DAILSQL - OPTION {option}")
     print("=" * 70)
-    
-    db_id = dev_json.split('/')[-2].split('_')[1]
 
     # Load credentials
-    credentials = load_mysql_credentials(mysql_credential_path, db_id)
+    credentials = load_mysql_credentials(mysql_credential_path, dataset)
     print(f"Loaded MySQL credentials for database: {credentials['database']}")
     
     # Load dev data
@@ -242,7 +234,7 @@ def main_postprocess(root_path, dev_json, mysql_credential_path, option, tables_
     error_count = 0
     
     for idx, item in enumerate(dev_data):
-        instance_id = item['instance_id']
+        instance_id = item['id']
         print(f"\n[{idx+1}/{len(dev_data)}] Processing {instance_id}...")
         
         # Create output directory for this instance
@@ -297,6 +289,7 @@ def main_postprocess(root_path, dev_json, mysql_credential_path, option, tables_
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', default='dw', type=str)
     parser.add_argument('--option', type=int, required=True, choices=[1, 2, 3],
                         help='Preprocessing option (1-3)')
     parser.add_argument('--model', default='gpt-4.1', type=str)
@@ -329,4 +322,4 @@ if __name__ == "__main__":
     else:
         mysql_credential_path = osp.join(proj_dir, args.mysql_credential)
 
-    main_postprocess(root_path, dev_json, mysql_credential_path, args.option, args.tables_file)
+    main_postprocess(args.dataset, root_path, dev_json, mysql_credential_path, args.option, args.tables_file)

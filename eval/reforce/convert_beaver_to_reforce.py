@@ -52,7 +52,7 @@ def get_all_tables_from_db(beaver_tables, db_id):
     """
     all_tables = []
     for table_ref, table_info in beaver_tables.items():
-        if table_info.get('db_id') == db_id:
+        if table_info.get('db') == db_id:
             all_tables.append(table_ref)
     return all_tables
 
@@ -69,11 +69,11 @@ def create_table_schema(table_info, examples_dict):
         CREATE TABLE statement as string
     """
     # Use clean table name without database prefix
-    table_name = table_info['table_name_original']
+    table_name = table_info['table_name']
     create_stmt = f"CREATE TABLE {table_name} (\n"
     
     cols = []
-    for col_name, col_type in zip(table_info['column_names_original'], 
+    for col_name, col_type in zip(table_info['column_names'], 
                                  table_info['column_types']):
         # Add examples if available
         if col_name in examples_dict and examples_dict[col_name]:
@@ -183,8 +183,24 @@ def process_sql(sql, db_id="dw"):
     sql = ' '.join(sql.split())   
     return sql
 
+def read_json(fn):
+    with open(fn) as f:
+        return json.load(f)
 
-def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_path, sampled_questions_path,
+def get_retrieved_tables(dataset: str, data_dir="../../data"):
+    retrieved_tables_fn = Path(f"{data_dir}/{dataset}/retrieval/retrieved_tables.json")
+    reranked_tables_fn = Path(f"{data_dir}/{dataset}/retrieval/reranked_tables.json")
+
+    assert retrieved_tables_fn.exists()
+    
+    if reranked_tables_fn.exists():
+        print(f'Loading reranked tables from {reranked_tables_fn}')
+        return read_json(reranked_tables_fn)
+    
+    print(f'Loading retrieved tables from {retrieved_tables_fn}')
+    return read_json(retrieved_tables_fn)
+
+def convert_beaver_to_reforce(dataset, beaver_questions_path, beaver_tables_path, output_path, sampled_questions_path,
                               preprocessing_option=2, join_keys_path=None, sample_size=None, seed=42, db_id="dw"):
     """
     Convert Beaver dataset to ReFoRCE format with preprocessing options.
@@ -194,7 +210,7 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
         beaver_tables_path: Path to Beaver dev_tables_new.json
         output_path: Path to save the converted data
         preprocessing_option: Integer 1-3 for preprocessing level:
-            1 - Base info with top 20 tables
+            1 - Base info with top k tables
             2 - Base info with gold tables + mapping + join keys
             3 - Base info with gold tables + mapping + join keys + external knowledge + subqueries
         join_keys_path: Optional path to global join keys file (for option 2)
@@ -216,8 +232,8 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
         new_beaver_tables = {}
         for k, v in beaver_tables.items():
             new_k = k.lower()
-            v['table_name_original'] = v['table_name_original'].lower()
-            v['column_names_original'] = [c.lower() for c in v['column_names_original']]
+            v['table_name'] = v['table_name'].lower()
+            v['column_names'] = [c.lower() for c in v['column_names']]
             new_beaver_tables[new_k] = v
         beaver_tables = new_beaver_tables
     
@@ -241,16 +257,16 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
     # Load templates if preprocessing option is 3
     templates = []
     if preprocessing_option == 3:
-        templates_path = "../../data/templates/template_structure (execution).json"
+        templates_path = "../../data/template_structure.json"
         print(f"Loading templates from: {templates_path}")
         with open(templates_path, 'r') as f:
             templates = json.load(f)
     
     print(f"\nPreprocessing option: {preprocessing_option}")
     option_desc = {
-        1: "Base info with TOP 20 tables only",
+        1: "Base info with TOP-K tables only",
         2: "Base info with GOLD tables + MAPPING + JOIN KEYS",
-        3: "Base info with GOLD tables + MAPPING + JOIN KEYS + EXTERNAL KNOWLEDGE + SUBQUERY GOLD QUESTIONS + SUBQUERY GOLD QUERIES"
+        3: "Base info with GOLD tables + MAPPING + JOIN KEYS + DOMAIN KNOWLEDGE + SUBQUERY GOLD QUESTIONS + SUBQUERY GOLD QUERIES"
     }
     print(f"Mode: {option_desc.get(preprocessing_option, 'Unknown')}")
     
@@ -284,7 +300,7 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
             
             # Fix gold_tables list casing
             if 'gold_tables' in item:
-                gold_tables = item['gold_tables']
+                gold_tables = item['tables']
                 fixed_gold_tables = []
                 for t in gold_tables:
                     k = get_table_key(t)
@@ -292,15 +308,15 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
                         fixed_gold_tables.append(k)
                     else:
                         fixed_gold_tables.append(t.lower()) # Fallback
-                item['gold_tables'] = fixed_gold_tables
+                item['tables'] = fixed_gold_tables
             
             # Fix mapping casing
             if 'mapping' in item:
                 new_mapping = {}
-                for m_k, m_v in item['mapping'].items():
+                for m_k, m_v in item['column_mapping'].items():
                     new_m_v = [col.lower() for col in m_v]
                     new_mapping[m_k] = new_m_v
-                item['mapping'] = new_mapping
+                item['column_mapping'] = new_mapping
 
             # Fix join_keys casing
             if 'join_keys' in item:
@@ -309,6 +325,8 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
                     new_join_keys.append([c.lower() for c in jk])
                 item['join_keys'] = new_join_keys
 
+    retrieved_tables = get_retrieved_tables(dataset)
+
     for idx, item in enumerate(beaver_questions):
         if (idx + 1) % 10 == 0:
             print(f"  Progress: {idx + 1}/{len(beaver_questions)}")
@@ -316,9 +334,9 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
         # Determine which tables to include based on preprocessing option
         table_refs = []
         if preprocessing_option == 1:
-            gold_tables = item.get('top_k_tables', [])
+            gold_tables = retrieved_tables[item['id']]
         else:
-            gold_tables = item.get('gold_tables', [])
+            gold_tables = item.get('tables', [])
         
         # Normalize gold tables for lookup
         gold_tables_lookup = []
@@ -327,7 +345,7 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
             if tk:
                 gold_tables_lookup.append(tk)
             else:
-                print(f"  Warning: Table {t} not found in beaver_tables for item {item['instance_id']}")
+                print(f"  Warning: Table {t} not found in beaver_tables for item {item['id']}")
         
         table_refs = list(set(gold_tables_lookup)) # Use the found keys for table_refs
         
@@ -339,10 +357,10 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
                 table_info = beaver_tables[table_ref]
                 
                 # Get examples from instances if available
-                instances = table_info.get('instances', [])
+                instances = table_info.get('example_columns', [])
                 examples_dict = format_instances_as_examples(
                     instances, 
-                    table_info['column_names_original']
+                    table_info['column_names']
                 )
                 
                 # Create table schema
@@ -350,13 +368,13 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
                 db_desc_parts.append(create_stmt)
             else:
                 # This case should ideally be caught by the get_table_key lookup earlier
-                print(f"  Warning: Table {table_ref} not found in beaver_tables during schema generation for item {item['instance_id']}")
+                print(f"  Warning: Table {table_ref} not found in beaver_tables during schema generation for item {item['id']}")
         
         db_desc = "\n\n".join(db_desc_parts)
         
         # Add mapping info for options 2 and 3
         if preprocessing_option >= 2 and 'mapping' in item:
-            db_desc += add_mapping_info(item['mapping'])
+            db_desc += add_mapping_info(item['column_mapping'])
         
         # Add join keys info for options 2 and 3
         if preprocessing_option >= 2:
@@ -372,49 +390,33 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
 
         # Add other evidences for option 3
         if preprocessing_option >= 3:
-            internal_evidence = item.get('internal_evidence', [])
-            external_evidence = item.get('external_evidence', [])
-            subquery_gold_questions = item.get('subquery_gold_questions', [])
-            subquery_gold_queries = item.get('subquery_gold_queries', [])
+            domain_knowledge = item.get('domain_knowledge', [])
+            sub_questions = item.get('sub_questions', [])
+            sub_sqls = item.get('sub_sqls', [])
 
-            # external knowledge = internal evidence + external evidence
-            external_knowledge = internal_evidence + external_evidence
-
-            if external_knowledge:
-                db_desc += "\n\n-- External Knowledge (database-wide):\n"
-                db_desc += "\n".join(external_knowledge)
+            if domain_knowledge:
+                db_desc += "\n\n-- Domain Knowledge (database-wide):\n"
+                db_desc += "\n".join(domain_knowledge)
                 db_desc += "\n"
-                db_desc += "You should use the external knowledge to help determine which tables and columns to use in the SQL statement as well as constructing the SQL statement."
+                db_desc += "You should use the domain knowledge to help determine which tables and columns to use in the SQL statement as well as constructing the SQL statement."
 
-            if subquery_gold_questions:
+            if sub_questions:
                 db_desc += "\n\n-- Subquery Gold Questions (database-wide):\n"
-                db_desc += "\n".join(subquery_gold_questions)
+                db_desc += "\n".join(sub_questions)
                 db_desc += "\n"
                 db_desc += "You must answer each subquery individually and then combine them to form the complete SQL statement. Each subquery you generate must be explicitly used in the final query you generate; do not simplify the subqueries you generate for implementation in the final query."
             
-            source_file = item.get('source_file')
-            # print(source_file)
-            if source_file != 'unknown' and 'subquery' not in source_file:
+            detailed_category = item.get('detailed_category')
+            if detailed_category and detailed_category != 'real' and detailed_category in templates:
                 db_desc += "\n\n Here is an explanation of which numbered subqueries you are given correspond to which query in the query structure you were provided:\n"
-                # if db_id == 'dw':
-                #     source_file = source_file.replace('_with_domain', '')
-                #     source_file = source_file.replace('_without_domain', '')
-                if db_id in ['sp', 'neutron', 'nova', 'dw']:
-                    source_file = source_file.replace('_sampled.json', '')
-                    source_file = source_file.replace('filtered_', '')
-                    source_file = source_file.replace('_with_domain', '')
-                    source_file = source_file.replace('_without_domain', '')
-                    source_file = source_file.replace('.json', '')
-                db_desc += f"{templates[source_file]['structure']}"
-                db_desc += "\n"
-                db_desc += "\n"
-                db_desc += templates[source_file]['subquery_decomposition']
+                db_desc += f"{templates[detailed_category]['structure']}\n\n"
+                db_desc += templates[detailed_category]['subquery_decomposition']
             
         
         # Create ReFoRCE entry
         reforce_entry = {
-            "instance_id": f"beaver_{item['db_id']}_opt{preprocessing_option}_{idx:03d}",
-            "db_id": item['db_id'],
+            "id": item['id'],
+            "db": item['db'],
             "db_desc": db_desc
         }
 
@@ -436,7 +438,7 @@ def convert_beaver_to_reforce(beaver_questions_path, beaver_tables_path, output_
     
     print(f"✓ Conversion complete! Saved to {output_path}")
     print(f"  Total questions: {len(reforce_data)}")
-    print(f"  Sample instance_id: {reforce_data[0]['instance_id']}")
+    print(f"  Sample instance_id: {reforce_data[0]['id']}")
     print(f"  Preprocessing option: {preprocessing_option} - {option_desc.get(preprocessing_option)}")
 
 
@@ -446,12 +448,12 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Preprocessing Options:
-  1 - Base info with TOP 20 tables only (default, most focused)
+  1 - Base info with TOP K tables only (default, most focused)
   2 - Base info with GOLD tables + MAPPING + JOIN KEYS (full context)
   3 - Base info with GOLD tables + MAPPING + JOIN KEYS + EXTERNAL KNOWLEDGE + SUBQUERY GOLD QUESTIONS + SUBQUERY GOLD QUERIES
 
 Examples:
-  # Option 1: Base info with TOP 20 tables only (default)
+  # Option 1: Base info with TOP K tables only (default)
   python convert_beaver_to_reforce.py --beaver_questions beaver/dev_dw_new/combined_fixed.json \\
     --beaver_tables beaver/dev_tables_new.json --output output1.json
   
@@ -467,6 +469,8 @@ Examples:
   
         """
     )
+    parser.add_argument('--dataset', type=str, default="dw",
+                       help='dataset (default: dw)')
     parser.add_argument('--beaver_questions', type=str, required=True,
                        help='Path to Beaver questions file (dev_dw_new/combined_fixed.json)')
     parser.add_argument('--beaver_tables', type=str, required=True,
@@ -492,6 +496,7 @@ Examples:
         args.db_id = args.db_id.replace('_real', '')
     
     convert_beaver_to_reforce(
+        args.dataset,
         args.beaver_questions,
         args.beaver_tables,
         args.output,

@@ -39,7 +39,7 @@ class BasicDataset(object):
             # for db_id in os.listdir(self.path_db):
             #     self.databases[db_id] = self.get_tables(db_id)
             for tj in tqdm(self.table_json, desc="Loading tables.json"):
-                db_id = tj["db_id"]
+                db_id = tj["db"]
                 self.databases[db_id] = self.get_tables(db_id)
         return self.databases
 
@@ -100,8 +100,8 @@ class BasicDataset(object):
         linking_infos = self.get_train_schema_linking()
         db_id_to_table_json = dict()
         for table_json in self.get_table_json():
-            db_id_to_table_json[table_json["db_id"]] = table_json
-        schemas = [db_id_to_table_json[d["db_id"]] for d in datas]
+            db_id_to_table_json[table_json["db"]] = table_json
+        schemas = [db_id_to_table_json[d["db"]] for d in datas]
         queries = [data["query"] for data in datas]
         pre_queries = self.get_pre_skeleton(queries, schemas)  
         return self.data_pre_process(datas, linking_infos, pre_queries)
@@ -115,16 +115,16 @@ class BasicDataset(object):
         linking_infos = self.get_test_schema_linking(mini_set)
         db_id_to_table_json = dict()
         for table_json in self.get_table_json():
-            db_id_to_table_json[table_json["db_id"]] = table_json
+            db_id_to_table_json[table_json["db"]] = table_json
 
         schemas = []
         for d in tests:
-            if isinstance(d["db_id"], str):
-                schemas.append(db_id_to_table_json[d["db_id"]])
-            elif isinstance(d["db_id"], list):
-                schemas.extend([db_id_to_table_json[db_id] for db_id in d["db_id"]])
+            if isinstance(d["db"], str):
+                schemas.append(db_id_to_table_json[d["db"]])
+            elif isinstance(d["db"], list):
+                schemas.extend([db_id_to_table_json[db_id] for db_id in d["db"]])
             else:
-                raise ValueError(f"db_id type error: {d['db_id']}")
+                raise ValueError(f"db_id type error: {d['db']}")
         if self.pre_test_result:
             with open(self.pre_test_result, 'r') as f:
                 lines = f.readlines()
@@ -178,7 +178,7 @@ class BasicDataset(object):
         example_dict = {}
         duplicated_index = []
         for i in range(len(train_data)):
-            db_id = train_data[i]["db_id"]
+            db_id = train_data[i]["db"]
             question = train_data[i]["question"]
             if (db_id, question) in example_dict.keys():
                 duplicated_index.append(i)
@@ -190,9 +190,9 @@ class BasicDataset(object):
     def data_pre_process(self, datas, linking_infos=None, pre_queries=None):
         db_id_to_table_json = dict()
         for table_json in self.get_table_json():
-            db_id_to_table_json[table_json["db_id"]] = table_json
+            db_id_to_table_json[table_json["db"]] = table_json
         for data in datas:
-            db_id = data["db_id"]
+            db_id = data["db"]
             data["tables"] = self.get_tables(db_id)
             # if data["query"].strip()[:6] != 'SELECT':
             #     data["query_skeleton"] = data["query"]
@@ -202,14 +202,14 @@ class BasicDataset(object):
         if linking_infos:
             db_id_to_table_json = dict()
             for table_json in self.get_table_json():
-                db_id_to_table_json[table_json["db_id"]] = table_json
+                db_id_to_table_json[table_json["db"]] = table_json
             for id in range(min(len(datas), len(linking_infos))):
                 datas[id]["sc_link"] = linking_infos[id]["sc_link"]
                 datas[id]["cv_link"] = linking_infos[id]["cv_link"]
                 datas[id]["question_for_copying"] = linking_infos[id]["question_for_copying"]
                 datas[id]["column_to_table"] = linking_infos[id]["column_to_table"]
                 datas[id]["column_descriptions"] = linking_infos[id].get("column_descriptions", {})
-                db_id = datas[id]["db_id"]
+                db_id = datas[id]["db"]
                 if isinstance(db_id, str):
                     datas[id]["table_names_original"] = db_id_to_table_json[db_id]["table_names_original"]
                 elif isinstance(db_id, list):

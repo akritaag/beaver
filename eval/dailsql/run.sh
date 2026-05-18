@@ -33,9 +33,9 @@ OPTION=$((SETTING + 1))
 
 # --- Load .env ---
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "${script_dir}/../.env" ]; then
+if [ -f "${script_dir}/../../.env" ]; then
     set -a
-    source "${script_dir}/../.env"
+    source "${script_dir}/../../.env"
     set +a
 fi
 
@@ -53,6 +53,9 @@ COMMENT="beaver_${DATASET}_opt${OPTION}"
 BEAVER_QUESTIONS="../../data/${DATASET}/dev_sampled.json"
 BEAVER_TABLES="../../data/${DATASET}/dev_tables.json"
 
+TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
+RUN_NAME="${MODEL}-beaver-${DATASET}-setting${SETTING}-log-${TIMESTAMP}"
+
 echo "========================================"
 echo "Running DAILSQL on ${DATASET} - Setting ${SETTING} (option ${OPTION})"
 echo "Model: ${MODEL}"
@@ -66,7 +69,7 @@ python preprocessed_data/beaver_preprocess.py \
     --option ${OPTION} \
     --questions_file ${BEAVER_QUESTIONS} \
     --tables_file ${BEAVER_TABLES} \
-    --split ${DATASET}
+    --dataset ${DATASET}
 
 if [ $? -ne 0 ]; then
     echo "Error during preprocessing. Exiting."
@@ -90,6 +93,7 @@ DEV_FILE="preprocessed_data/${DEV}/${DEV}_preprocessed.json"
 TABLES_FILE=${BEAVER_TABLES}
 
 python postprocessed_data/beaver_postprocess.py \
+    --dataset ${DATASET} \
     --option ${OPTION} \
     --model ${MODEL} \
     --comment ${COMMENT} \
@@ -97,17 +101,14 @@ python postprocessed_data/beaver_postprocess.py \
     --dev ${DEV} \
     --tables_file ${TABLES_FILE}
 
-# Step 5: Evaluate results
+# Step 5: Unify results
 echo ""
-echo "Step 5: Evaluating results with ReFoRCE comparison logic..."
-python evaluate_beaver_reforce.py \
-    --option ${OPTION} \
-    --model ${MODEL} \
-    --comment ${COMMENT} \
-    --dev_file ${DEV_FILE} \
-    --dev ${DEV} \
-    --tables_file ${TABLES_FILE} \
-    --db_id ${DATASET}
+echo "Step 5: Unifying generated SQLs..."
+python unify.py \
+    --input_dir postprocessed_data/${COMMENT}_${DEV}_CTX-200/RESULTS_MODEL-${MODEL}-SQL \
+    --run_name $RUN_NAME \
+    --gold_file ../../data/${DATASET}/dev_sampled.json \
+    --dataset ${DATASET}
 
 echo ""
 echo "========================================"

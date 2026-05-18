@@ -34,9 +34,9 @@ EVAL_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DATA_DIR="$(cd "${SCRIPT_DIR}/../../data" && pwd)"
 
 # --- Load .env ---
-if [ -f "${EVAL_DIR}/.env" ]; then
+if [ -f "${EVAL_DIR}/../.env" ]; then
     set -a
-    source "${EVAL_DIR}/.env"
+    source "${EVAL_DIR}/../.env"
     set +a
 fi
 
@@ -65,7 +65,7 @@ echo ""
 echo "Step 1: Generating Predictions"
 echo "=============================="
 cd "$SCRIPT_DIR"
-python parallel_execute.py \
+python execute.py \
     --model "$MODEL" \
     --dataset "$DATASET" \
     --data_dir "$DATA_DIR" \
@@ -74,17 +74,16 @@ python parallel_execute.py \
     $HINTS
 
 echo ""
-echo "Step 2: Evaluating Predictions"
+echo ""
+echo "Step 2: Unify Predictions"
 echo "=============================="
 GOLD_FILE="${DATA_DIR}/${DATASET}/dev_sampled.json"
-TABLES_FILE="${DATA_DIR}/${DATASET}/dev_tables.json"
 
-python eval.py \
-    --output_dir "$OUTPUT_DIR" \
-    --gold "$GOLD_FILE" \
-    --dataset "$DATASET" \
-    --tables "$TABLES_FILE"
+python unify.py \
+    --input_dir "$OUTPUT_DIR" \
+    --gold_file "$GOLD_FILE" \
+    --dataset "$DATASET"
 
 echo "========================================"
-echo "Few-Shot Evaluation Complete!"
+echo "Few-Shot Generation Complete!"
 echo "Results saved to: $OUTPUT_DIR"

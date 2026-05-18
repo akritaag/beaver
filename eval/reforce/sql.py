@@ -2,19 +2,13 @@ import sqlite3
 import io
 import csv
 from utils import hard_cut
-from google.cloud import bigquery
-from google.oauth2 import service_account
-import snowflake.connector
+# from google.cloud import bigquery
+# from google.oauth2 import service_account
+# import snowflake.connector
 import json
 import os
 import pandas as pd
 from func_timeout import func_timeout, FunctionTimedOut
-
-try:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
-except ImportError:
-    pass
 
 try:
     import mysql.connector
@@ -75,10 +69,6 @@ class SqlEnv:
                 user = os.environ.get("MYSQL_USER", "root")
                 password = os.environ.get("MYSQL_PASSWORD", "")
                 database = os.environ.get("MYSQL_DATABASE", ex_id)
-                if database == "neutron":
-                    database = "csail_stata_neutron"
-                elif database == "nova":
-                    database = "csail_stata_nova"
                 mysql_credential = {
                     "host": host,
                     "user": user,

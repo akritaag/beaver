@@ -14,9 +14,9 @@ def format_instruction(instruction, query, doc):
     return output
 
 class Reranker():
-    def __init__(self) -> None:
-        self.tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-Reranker-8B", padding_side='left')
-        self.model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-Reranker-8B").cuda().eval()
+    def __init__(self, model) -> None:
+        self.tokenizer = AutoTokenizer.from_pretrained(model, padding_side='left')
+        self.model = AutoModelForCausalLM.from_pretrained(model).cuda().eval()
         # We recommend enabling flash_attention_2 for better acceleration and memory saving.
         # model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen3-Reranker-8B", torch_dtype=torch.float16, attn_implementation="flash_attention_2").cuda().eval()
 

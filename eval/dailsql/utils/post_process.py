@@ -12,11 +12,11 @@ from itertools import product
 from typing import Tuple, Any, List, Set
 import sqlparse
 import tqdm
-from google.cloud import bigquery
+# from google.cloud import bigquery
 
 proj_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
 sys.path = [osp.join(proj_dir, '../')] + sys.path
-from utils.post_utils import spider2_postprocess_single_sql
+# from utils.post_utils import spider2_postprocess_single_sql
 
 
 # process the case of duplicated output of ChatGPT and GPT4 for SQL Representation with QA or SQLONLY Organization
@@ -241,7 +241,7 @@ def get_exec_output(
 
 def get_sqls(result, select_number, db_dir, instance_id):
     p_sqls = []
-    db_id = result['db_id']
+    db_id = result['db']
 
     # Collect p_sqls up to select_number
     for i, x in enumerate(result['p_sqls']):

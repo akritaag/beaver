@@ -1,20 +1,12 @@
 import os
 from tqdm import tqdm
-from transformers import set_seed
-from tiger_utils import read_json, write_json
 from concurrent.futures import ThreadPoolExecutor
 from openai import OpenAI
 
-from benchmark_ete import get_ete_prompts
-from utils import get_r_fn, EvalConfig
+from prompt import get_ete_prompts
+from utils import EvalConfig
 
 import argparse
-
-try:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
-except ImportError:
-    pass
 
 MODEL_MAP = {
     "gpt-5-mini": "gpt-5-mini",
@@ -175,8 +167,6 @@ def run_prompts(prompts, indices, instance_ids, output_dir: str, model: str):
 
 
 if __name__ == "__main__":
-    set_seed(1234)
-
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="gpt-5-mini")
     parser.add_argument("--dataset", type=str, default="dw")
@@ -192,34 +182,21 @@ if __name__ == "__main__":
 
     model = args.model
     dataset = args.dataset
-    print(dataset)
     q_fn = args.q_fn
 
-    # model = "gpt-5-mini" 
-    # dataset = ["dw", "sp", "neutron", 'nova'][0]
-    print(args.gold_tables, args.join_keys, args.mapping, args.knowledge, args.decomp)
     eval_config = EvalConfig(
         gold_tables=args.gold_tables, join_keys=args.join_keys, mapping=args.mapping, knowledge=args.knowledge, decomp=args.decomp
     )
-    # import sys
-    # sys.exit(0)
-
-    # q_fn = "dev"
+    print(eval_config)
 
     prompts, instance_ids = get_ete_prompts(dataset, q_fn, eval_config, args.data_dir)
     
-    output_dir = args.output_dir if args.output_dir else get_r_fn(dataset, model, eval_config)
+    output_dir = args.output_dir
 
     print(f"Output directory: {output_dir}")
     os.makedirs(output_dir, exist_ok=True)
 
     selected_indices = list(range(len(prompts)))
     selected_prompts = [prompts[i] for i in selected_indices]
-
-    # print(selected_prompts[0])
-
-    # for x in selected_prompts[0]:
-    #     print(x["role"], x["content"])
-    #     print("\n\n")
 
     run_prompts(selected_prompts, selected_indices, instance_ids, output_dir, model)

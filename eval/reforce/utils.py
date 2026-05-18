@@ -170,7 +170,7 @@ def get_api_name(sql_data):
         return "sqlite"
     elif sql_data.startswith("bq") or sql_data.startswith("ga"):
         return "bigquery"
-    elif sql_data.startswith("beaver"):
+    elif any(sql_data.startswith(prefix) for prefix in ["beaver", "dw", "sp", "nova", "neutron"]):
         return "mysql"
     else:
         raise NotImplementedError("Invalid file name.")
@@ -193,12 +193,12 @@ def get_dictionary(db_path, task):
         for line in f:
             line_js = json.loads(line)
             if task == "snow":
-                task_dict[line_js['instance_id']] = line_js['instruction']
-                # if not line_js['instance_id'].startswith("sf"):
-                #     line_js['instance_id'] = "sf_"+line_js['instance_id']
-                # task_dict[line_js['instance_id']] = line_js['question']
+                task_dict[line_js['id']] = line_js['instruction']
+                # if not line_js['id'].startswith("sf"):
+                #     line_js['id'] = "sf_"+line_js['id']
+                # task_dict[line_js['id']] = line_js['question']
             elif task == "lite":
-                task_dict[line_js['instance_id']] = line_js['question']
+                task_dict[line_js['id']] = line_js['question']
 
     dictionaries = [entry for entry in os.listdir(db_path) if os.path.isdir(os.path.join(db_path, entry))]
     return dictionaries, task_dict
@@ -210,7 +210,7 @@ def get_db_id(db_path, ex_id):
     with open(json_path) as f:
         for line in f:
             line_js = json.loads(line)
-            if line_js['instance_id'] == ex_id:
+            if line_js['id'] == ex_id:
                 return line_js["db"]
 
 
