@@ -3,7 +3,7 @@
 [![Dataset](https://img.shields.io/badge/HuggingFace-Dataset-blue?logo=huggingface)](https://huggingface.co/collections/beaverbench/beaver-dataset)
 [![Paper](https://img.shields.io/badge/arXiv-Paper-red?logo=arxiv)](https://arxiv.org/abs/2409.02038)
 
-This repository contains the evaluation code for the **BEAVER** text-to-SQL benchmark. It includes (i) four text-to-SQL methods: **ReFoRCE**, **DAIL-SQL**, **DIN-SQL**, and **Few-shot** (ii) two evaluation modes: coarse-grained evaluation (execution accuracy) and fine-grained evaluation across five subtasks critical to text-to-SQL.
+This repository contains the evaluation code for the **BEAVER** text-to-SQL benchmark. It includes (i) four text-to-SQL methods: **ReFoRCE**, **DAIL-SQL**, **DIN-SQL**, and **Few-shot** (ii) two evaluation modes: **coarse-grained evaluation** (execution accuracy) and **fine-grained evaluation** across five subtasks critical to text-to-SQL.
 
 ## Repository Structure
 
@@ -43,7 +43,7 @@ MYSQL_PASSWORD=xxx
 ```
 
 ### Data Pre-processing
-Our [gated dataset](https://huggingface.co/collections/beaverbench/beaver-dataset) is hoted on Hugging Face. You must be **authenticated** to access it, which means logging in through your CLI before downloading any files.
+Our [gated dataset](https://huggingface.co/collections/beaverbench/beaver-dataset) is hoted on Hugging Face. You must be **authenticated** to access it, which means logging in through your CLI.
 
 ```bash
 python data/download_hf.py --sample [sample_size]
