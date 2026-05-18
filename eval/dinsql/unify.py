@@ -21,7 +21,7 @@ def main():
     run_name = os.path.basename(args.input_dir)
     
     baseline_name = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
-    unified_dir = os.path.join(eval_dir, "output", "unified", baseline_name, run_name)
+    unified_dir = os.path.join(eval_dir, "unified-output", baseline_name, run_name)
     generated_dir = os.path.join(unified_dir, "generated")
     gold_dir = os.path.join(unified_dir, "gold")
     
