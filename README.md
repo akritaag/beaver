@@ -5,6 +5,16 @@
 
 This repository contains the evaluation code for the **BEAVER** text-to-SQL benchmark. It includes (i) four text-to-SQL methods: **ReFoRCE**, **DAIL-SQL**, **DIN-SQL**, and **Few-shot** (ii) two evaluation modes: **coarse-grained evaluation** (execution accuracy) and **fine-grained evaluation** across five subtasks critical to text-to-SQL.
 
+If you find our data, code, or the paper helpful, please cite the paper:
+```
+@article{chen2024beaver,
+  title={BEAVER: an enterprise benchmark for text-to-sql},
+  author={Chen, Peter Baile and Yang, Devin and Li, Weiyue and Wenz, Fabian and Zhang, Yi and Tatbul, Nesime and Cafarella, Michael and Demiralp, {\c{C}}a{\u{g}}atay and Stonebraker, Michael},
+  journal={arXiv preprint arXiv:2409.02038},
+  year={2024}
+}
+```
+
 ## Repository Structure
 
 ```
