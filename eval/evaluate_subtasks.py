@@ -4,10 +4,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv('../.env')
-
 from utils.llm import GPTChat
-from evaluate_extraction import eval_extraction_output, EXTRACTION_PROMPT
+from evaluate_extraction_subtasks import (
+    eval_extraction_output, EXTRACTION_PROMPT
+)
+
+load_dotenv('../.env')
 
 def write_json(obj, fn):
     with open(fn, 'w') as f:
@@ -83,10 +85,7 @@ Do NOT include any extra keys. Do NOT include markdown. Do NOT include code bloc
 Now evaluate.
 """
 
-def get_q_id(sql_fn):
-    return str(sql_fn).split('/')[-1].replace('.sql', '')
-
-def evaluate_single_entry(sql_fn, gold_data, chat_client: GPTChat, output_dir: Path):
+def evaluate_single_entry(sql_fn: Path, gold_data, chat_client: GPTChat, output_dir: Path):
     result = {
         "sql_fn": str(sql_fn),
         "status": "error",
@@ -98,7 +97,7 @@ def evaluate_single_entry(sql_fn, gold_data, chat_client: GPTChat, output_dir: P
     }
 
     try:
-        q_id = get_q_id(sql_fn)
+        q_id = sql_fn.name.replace('.sql', '')
 
         gold_entry = gold_data[q_id]
         reference_sqls = gold_entry.get("sub_sqls", [])
@@ -226,7 +225,7 @@ def main():
         **avg_scores
     }
     
-    summary_path = Path(args.input_dir) / "subtask_summary.json"
+    summary_path = Path(args.input_dir) / "summary_subtasks.json"
     write_json(summary, summary_path)
 
     print(f"\nEvaluation Complete.")

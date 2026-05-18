@@ -1,27 +1,26 @@
-import os
 import json
 import argparse
-import glob
 import pandas as pd
 from tqdm import tqdm
 import sys
+from pathlib import Path
+from dotenv import load_dotenv
 
-# Add the eval directory to path to import unified_utils
-sys.path.append(os.path.dirname(__file__))
-from unified_utils import get_mysql_credentials, execute_sql_with_timeout, compare_results
+load_dotenv('../.env')
+
+from ex_acc_utils import get_mysql_credentials, execute_sql_with_timeout, compare_results
 
 def main():
     parser = argparse.ArgumentParser(description="Unified evaluation script for text-to-SQL baselines")
-    parser.add_argument("--unified_dir", type=str, required=True, help="Path to the unified output directory containing generated/ and gold/ subdirectories")
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name for MySQL credentials, e.g. dw")
+    parser.add_argument("--input_dir", type=str, required=True, help="Path to the unified output directory containing generated/ and gold/ subdirectories")
     args = parser.parse_args()
     
-    args.unified_dir = args.unified_dir.rstrip('/')
-    generated_dir = os.path.join(args.unified_dir, "generated")
-    gold_dir = os.path.join(args.unified_dir, "gold")
+    generated_dir =  Path(args.input_dir) / "generated"
+    gold_dir = Path(args.input_dir) / "gold"
     
-    if not os.path.exists(generated_dir) or not os.path.exists(gold_dir):
-        print(f"Error: Could not find 'generated' or 'gold' directories inside {args.unified_dir}")
+    if not generated_dir.exists() or not gold_dir.exists():
+        print(f"Error: Could not find 'generated' or 'gold' directories inside {args.input_dir}")
         sys.exit(1)
         
     mysql_creds = get_mysql_credentials(args.dataset)
@@ -29,7 +28,7 @@ def main():
         print(f"Error: Could not load MySQL credentials for dataset {args.dataset}")
         sys.exit(1)
         
-    gold_files = sorted(glob.glob(os.path.join(gold_dir, "*.sql")))
+    gold_files = sorted(gold_dir.glob("*.sql"))
     
     total_queries = len(gold_files)
     total_attempted = total_queries
@@ -40,12 +39,11 @@ def main():
     
     results = []
     
-    print(f"Evaluating {total_queries} queries from {args.unified_dir}...")
+    print(f"Evaluating {total_queries} queries from {args.input_dir}...")
     
     for gold_sql_path in tqdm(gold_files):
-        filename = os.path.basename(gold_sql_path)
-        base_name = filename.replace(".sql", "")
-        pred_sql_path = os.path.join(generated_dir, filename)
+        filename = gold_sql_path.name
+        pred_sql_path = generated_dir / filename
         
         # 1. Execute Gold SQL
         with open(gold_sql_path, "r") as f:
@@ -58,7 +56,7 @@ def main():
             
         # 2. Execute Predicted SQL
         pred_sql = ""
-        if os.path.exists(pred_sql_path):
+        if pred_sql_path.exists():
             with open(pred_sql_path, "r") as f:
                 pred_sql = f.read().strip()
         
@@ -122,7 +120,7 @@ def main():
         "details": sorted(results, key=lambda x: x["file"])
     }
     
-    summary_path = os.path.join(args.unified_dir, "evaluation_summary.json")
+    summary_path = Path(args.input_dir) / "summary_ex_acc.json"
     with open(summary_path, "w") as f:
         json.dump(summary_data, f, indent=4)
         

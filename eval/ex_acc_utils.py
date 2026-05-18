@@ -6,13 +6,6 @@ import threading
 import time
 import sys
 
-# Load environment variables if dotenv exists
-try:
-    from dotenv import load_dotenv
-    load_dotenv(os.path.join(os.path.dirname(__file__), '../.env'))
-except ImportError:
-    pass
-
 # Constants
 QUERY_TIMEOUT = 10
 CONNECTION_TIMEOUT = 10
