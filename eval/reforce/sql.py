@@ -69,12 +69,6 @@ class SqlEnv:
                 user = os.environ.get("MYSQL_USER", "root")
                 password = os.environ.get("MYSQL_PASSWORD", "")
                 database = os.environ.get("MYSQL_DATABASE", ex_id)
-                if database == "neutron":
-                    database = "csail_stata_neutron"
-                elif database == "nova":
-                    database = "csail_stata_nova"
-                elif database == "dw_real":
-                    database = "dw"
                 mysql_credential = {
                     "host": host,
                     "user": user,

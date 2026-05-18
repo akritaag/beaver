@@ -69,7 +69,7 @@ def convert_beaver_tables_to_dailsql_format(beaver_tables_path, output_path, gol
         
         schema = db_schemas[db_id]
         table_name = table_info['table_name']
-        if split in ["neutron", "nova", "csail_stata_neutron", "csail_stata_nova"]:
+        if split in ["neutron", "nova"]:
             table_name = table_name.lower()
         
         # Add wildcard column only once at the start
@@ -88,7 +88,7 @@ def convert_beaver_tables_to_dailsql_format(beaver_tables_path, output_path, gol
         
         # Add columns with descriptions
         for col_name, col_type in zip(table_info['column_names'], table_info['column_types']):
-            if split in ["neutron", "nova", "csail_stata_neutron", "csail_stata_nova"]:
+            if split in ["neutron", "nova"]:
                 col_name = col_name.lower()
             schema['column_names'].append([table_idx, col_name])
             schema['column_names_original'].append([table_idx, col_name])
@@ -174,9 +174,7 @@ def convert_beaver_tables_to_dailsql_format(beaver_tables_path, output_path, gol
                             schema['foreign_keys'].append([source_idx, target_idx])
 
 
-                    elif split in ["sp", "neutron", "nova", "csail_stata_neutron", "csail_stata_nova"]:
-
-                    
+                    elif split in ["sp", "neutron", "nova"]:
                         # Case insensitive lookup for target table
                         target_table_idx = None
                         target_idx = None
@@ -441,14 +439,14 @@ if __name__ == '__main__':
                         help='Specific path to questions file (overrides beaver_dir default)')
     parser.add_argument('--tables_file', type=str, default=None,
                         help='Specific path to tables file (overrides beaver_dir default)')
-    parser.add_argument('--dataset', type=str, default='dw', choices=['dw', 'sp', 'neutron', 'nova', 'dw_real', 'sp_real', 'sp_easy'],
+    parser.add_argument('--dataset', type=str, default='dw',
                         help='Split to preprocess (default: dw)')
     args = parser.parse_args()
     
     proj_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
     beaver_base_dir = osp.join(proj_dir, args.beaver_dir)
 
-    subdir_name = f'beaver_{args.dataset}_opt{args.option}'     
+    subdir_name = f'beaver_{args.dataset}_opt{args.option}'
     output_base_dir = osp.join(proj_dir, 'preprocessed_data', subdir_name)
     
     print("=" * 70)

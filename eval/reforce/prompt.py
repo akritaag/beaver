@@ -168,9 +168,9 @@ class Prompts:
         """
         if db_id == "sp":
             return self.get_sp_one_shot_example(option)
-        elif db_id == "csail_stata_neutron":
+        elif db_id == "neutron":
             return self.get_neutron_one_shot_example(option)
-        elif db_id == "csail_stata_nova":
+        elif db_id == "nova":
             return self.get_nova_one_shot_example(option)
         return self.get_dw_one_shot_example(option)
 
@@ -318,7 +318,7 @@ SELECT rp.Room_ID, rp.RoomType, COUNT(pe.Event_ID) AS total_events, AVG(DATEDIFF
 
     def get_neutron_one_shot_example(self, option=2):
         txt = r'''[One-shot Example]
-Database ID: csail_stata_neutron
+Database ID: neutron
 
 [Database description]
 CREATE TABLE qos_port_policy_bindings (
@@ -382,7 +382,7 @@ SELECT COUNT(*) AS qos_bound_admin_up_down_dvr_ports FROM qos_port_policy_bindin
 
     def get_nova_one_shot_example(self, option=2):
         txt = r'''[One-shot Example]
-Database ID: csail_stata_nova
+Database ID: nova
 
 [Database description]
 CREATE TABLE instance_system_metadata (

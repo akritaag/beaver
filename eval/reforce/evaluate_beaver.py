@@ -35,7 +35,7 @@ import time
 import sys
 
 
-def get_mysql_credentials(db_id, creds_path=None):
+def get_mysql_credentials(dataset, creds_path=None):
     """Get MySQL credentials from JSON file or environment variables.
     
     Priority: JSON file > environment variables.
@@ -49,13 +49,10 @@ def get_mysql_credentials(db_id, creds_path=None):
     host = os.environ.get("MYSQL_HOST")
     user = os.environ.get("MYSQL_USER")
     password = os.environ.get("MYSQL_PASSWORD")
-    database = db_id
-    if db_id == "neutron":
-        database = "csail_stata_neutron"
-    elif db_id == "nova":
-        database = "csail_stata_nova"
-    elif db_id == "dw_real":
+    if dataset == "dw_real":
         database = "dw"
+    else:
+        database = dataset
     
     if host and user and password:
         return {
@@ -224,19 +221,15 @@ def compare_results(pred_df, gold_df):
     return False, "Values mismatch"
 
 
-def evaluate_beaver_results(beaver_questions_path, output_dir, mysql_creds_path, gold_result_dir=None, db_id=None):
+def evaluate_beaver_results(beaver_questions_path, output_dir, mysql_creds_path, gold_result_dir=None, dataset=None):
     """Evaluate all ReFoRCE results against gold SQL."""
 
     # Load Beaver questions with gold SQL
     with open(beaver_questions_path, "r") as f:
         beaver_data = json.load(f)
 
-    # Infer db_id from data if not provided
-    if not db_id and beaver_data:
-        db_id = beaver_data[0].get("db", "dw")
-
     # Load MySQL credentials
-    mysql_creds = get_mysql_credentials(db_id, mysql_creds_path)
+    mysql_creds = get_mysql_credentials(dataset, mysql_creds_path)
 
     results = []
     error_gold_execution_failed = []  # list of question ids with gold SQL execution errors
@@ -504,7 +497,7 @@ def main():
         help="Path to MySQL credentials JSON file (optional, falls back to env vars)",
     )
     parser.add_argument(
-        "--db_id",
+        "--dataset",
         type=str,
         default=None,
         help="Database ID / name for MySQL connection (derived from data if omitted)",
@@ -513,7 +506,7 @@ def main():
     args = parser.parse_args()
 
     evaluate_beaver_results(
-        args.beaver_questions, args.output_dir, args.mysql_creds, args.gold_result_dir, args.db_id
+        args.beaver_questions, args.output_dir, args.mysql_creds, args.gold_result_dir, args.dataset
     )
 
 

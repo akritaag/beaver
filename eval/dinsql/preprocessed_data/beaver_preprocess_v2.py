@@ -77,7 +77,7 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
         
         schema = db_schemas[db_id]
         table_name = table_info['table_name']
-        if split in ["neutron", "nova", "csail_stata_neutron", "csail_stata_nova"]:
+        if split in ["neutron", "nova"]:
             table_name = table_name.lower()
         table_idx = len(schema['table_names_original'])
         
@@ -92,7 +92,7 @@ def convert_beaver_tables_to_dinsql_format(beaver_tables_path, output_path, gold
         
         # Add columns
         for col_name, col_type in zip(table_info['column_names'], table_info['column_types']):
-            if split in ["neutron", "nova", "csail_stata_neutron", "csail_stata_nova"]:
+            if split in ["neutron", "nova"]:
                 col_name = col_name.lower()
             schema['column_names'].append([table_idx, col_name])
             schema['column_names_original'].append([table_idx, col_name])
@@ -346,34 +346,14 @@ if __name__ == '__main__':
                         help='Specific path to questions file (overrides beaver_dir default)')
     parser.add_argument('--tables_file', type=str, default=None,
                         help='Specific path to tables file (overrides beaver_dir default)')
-    parser.add_argument('--split', type=str, default='dw', choices=['dw', 'sp', 'neutron', 'nova', 'csail_stata_neutron', 'csail_stata_nova', 'dw_real', 'sp_real', 'neutron_real', 'nova_real', 'sp_easy'],
-                        help='Split to preprocess (default: dw)')
+    parser.add_argument('--dataset', type=str, default='dw',
+                        help='Dataset to preprocess (default: dw)')
     args = parser.parse_args()
     
     proj_dir = osp.dirname(osp.dirname(osp.abspath(__file__)))
     beaver_base_dir = osp.join(proj_dir, args.beaver_dir)
     
-    # Determine output subdir name based on input filename if provided, else generic
-    if args.questions_file and ('sp' in args.questions_file or 'neutron' in args.questions_file or 'nova' in args.questions_file or 'dw_real' in args.questions_file or 'sp_real' in args.questions_file or 'neutron_real' in args.questions_file or 'nova_real' in args.questions_file or 'sp_easy' in args.questions_file):
-        if 'neutron' in args.questions_file:
-            subdir_name = f'beaver_neutron_opt{args.option}'
-        elif 'nova' in args.questions_file:
-            subdir_name = f'beaver_nova_opt{args.option}'
-        elif 'dw_real' in args.questions_file:
-            subdir_name = f'beaver_dw_real_opt{args.option}'
-        elif 'sp_real' in args.questions_file:
-            subdir_name = f'beaver_sp_real_opt{args.option}'
-        elif 'sp_easy' in args.questions_file:
-            subdir_name = f'beaver_sp_easy_opt{args.option}'
-        elif 'neutron_real' in args.questions_file:
-            subdir_name = f'beaver_neutron_real_opt{args.option}'
-        elif 'nova_real' in args.questions_file:
-            subdir_name = f'beaver_nova_real_opt{args.option}'
-        else:
-            subdir_name = f'beaver_sp_opt{args.option}'
-    else:
-        subdir_name = f'beaver_dw_opt{args.option}'
-
+    subdir_name = f'beaver_{args.dataset}_opt{args.option}'
     output_base_dir = osp.join(proj_dir, 'preprocessed_data', subdir_name)
     
     print("=" * 70)
@@ -424,31 +404,10 @@ if __name__ == '__main__':
         beaver_tables_path, 
         output_tables_path,
         gold_tables_filter=gold_tables_filter,
-        split=args.split
+        split=args.dataset
     )
     
-    # Convert questions with appropriate option
-    # Use explicit naming if sp/neutron/nova
-    if args.questions_file and ('sp' in args.questions_file or 'neutron' in args.questions_file or 'nova' in args.questions_file or 'dw_real' in args.questions_file or 'sp_real' in args.questions_file or 'neutron_real' in args.questions_file or 'nova_real' in args.questions_file or 'sp_easy' in args.questions_file):
-        if 'neutron' in args.questions_file:
-            output_questions_filename = f'beaver_neutron_opt{args.option}_preprocessed.json'
-        elif 'nova' in args.questions_file:
-            output_questions_filename = f'beaver_nova_opt{args.option}_preprocessed.json'
-        elif 'dw_real' in args.questions_file:
-            output_questions_filename = f'beaver_dw_real_opt{args.option}_preprocessed.json'
-        elif 'sp_real' in args.questions_file:
-            output_questions_filename = f'beaver_sp_real_opt{args.option}_preprocessed.json'
-        elif 'sp_easy' in args.questions_file:
-            output_questions_filename = f'beaver_sp_easy_opt{args.option}_preprocessed.json'
-        elif 'neutron_real' in args.questions_file:
-            output_questions_filename = f'beaver_neutron_real_opt{args.option}_preprocessed.json'
-        elif 'nova_real' in args.questions_file:
-            output_questions_filename = f'beaver_nova_real_opt{args.option}_preprocessed.json'
-        else:
-            output_questions_filename = f'beaver_sp_opt{args.option}_preprocessed.json'
-    else:
-        output_questions_filename = f'beaver_dw_opt{args.option}_preprocessed.json'
-    
+    output_questions_filename = f'beaver_{args.dataset}_opt{args.option}_preprocessed.json'
     output_questions_path = osp.join(output_base_dir, output_questions_filename)
     
     print(f"\n[3/3] Converting questions with option {args.option}...")
@@ -468,7 +427,7 @@ if __name__ == '__main__':
             templates = json.load(f)
 
     dinsql_questions = convert_beaver_questions_to_dinsql_format(
-        args.split,
+        args.dataset,
         beaver_questions_path, 
         output_questions_path,
         option=args.option,

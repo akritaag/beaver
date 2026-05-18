@@ -11,11 +11,11 @@ QUERY_TIMEOUT = 10
 CONNECTION_TIMEOUT = 10
 
 
-def get_mysql_credentials(db_id, creds_path=None):
+def get_mysql_credentials(dataset, creds_path=None):
     """Get MySQL credentials from JSON file or environment variables.
     
     Priority: JSON file > environment variables.
-    The database name is derived from db_id.
+    The database name is derived from `dataset`.
     """
     if creds_path and os.path.exists(creds_path):
         with open(creds_path, "r") as f:
@@ -25,12 +25,10 @@ def get_mysql_credentials(db_id, creds_path=None):
     host = os.environ.get("MYSQL_HOST")
     user = os.environ.get("MYSQL_USER")
     password = os.environ.get("MYSQL_PASSWORD")
-    if db_id == "neutron":
-        db_id = "csail_stata_neutron"
-    elif db_id == "nova":
-        db_id = "csail_stata_nova"
-    elif db_id == "dw_real":
+    if dataset == "dw_real":
         db_id = "dw"
+    else:
+        db_id = dataset
     
     if host and user and password:
         return {
