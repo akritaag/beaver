@@ -11,6 +11,7 @@ import json
 from multiprocessing import Pool, set_start_method
 from pathlib import Path
 import logging
+import numpy as np
 
 # Import the original DIN-SQL functions
 from importlib.machinery import SourceFileLoader
@@ -255,6 +256,8 @@ if __name__ == '__main__':
     # Load schema and questions
     spider_schema, spider_primary, spider_foreign = creating_schema_preprocessed(DATASET_SCHEMA)
     val_df = pd.read_json(DATASET)
+    # by default, pd will put nan for missing keys, we want it to be None
+    val_df = val_df.replace({np.nan: None})
     
     if args.output_dir:
         output_dir = args.output_dir
