@@ -375,13 +375,13 @@ def convert_beaver_questions_to_dailsql_format(dataset, beaver_questions_path, o
 
             if 'dw' in question_info['db']:
                 # do not lower case for dw
-                base_item["tables"] = [table.replace(f"{question_info['db']}#sep#", '') for table in raw_gold_tables]
-                base_item["tables"] = [table.replace('dw#sep#', '') for table in base_item["tables"]]
+                base_item["gold_tables"] = [table.replace(f"{question_info['db']}#sep#", '') for table in raw_gold_tables]
+                base_item["gold_tables"] = [table.replace('dw#sep#', '') for table in base_item["tables"]]
             else:
-                base_item["tables"] = [t.split('#sep#')[1].lower() if '#sep#' in t else t.lower() for t in raw_gold_tables]
+                base_item["gold_tables"] = [t.split('#sep#')[1].lower() if '#sep#' in t else t.lower() for t in raw_gold_tables]
         else:
             # Option None: No filtering, include all tables
-            base_item["tables"] = []
+            base_item["gold_tables"] = []
         
         # Store original data for evaluation
         if option >= 2:

@@ -104,7 +104,7 @@ python evaluate_beaver.py \
     --beaver_questions $DATA_FILE \
     --output_dir $OUTPUT_PATH \
     --gold_result_dir $GOLD_RESULT_PATH \
-    --db_id $DATASET
+    --dataset $DATASET
 
 # Step 2: Column Exploration + Rerun
 echo ""
@@ -135,7 +135,7 @@ python evaluate_beaver.py \
     --beaver_questions $DATA_FILE \
     --output_dir $OUTPUT_PATH \
     --gold_result_dir $GOLD_RESULT_PATH \
-    --db_id $DATASET
+    --dataset $DATASET
 
 # Step 3: Random vote for tie
 echo ""
@@ -157,7 +157,7 @@ python evaluate_beaver.py \
     --beaver_questions $DATA_FILE \
     --output_dir $OUTPUT_PATH \
     --gold_result_dir $GOLD_RESULT_PATH \
-    --db_id $DATASET
+    --dataset $DATASET
 
 # Step 4: Final Vote
 echo ""
@@ -180,7 +180,7 @@ python evaluate_beaver.py \
     --beaver_questions $DATA_FILE \
     --output_dir $OUTPUT_PATH \
     --gold_result_dir $GOLD_RESULT_PATH \
-    --db_id $DATASET
+    --dataset $DATASET
 
 echo ""
 echo "========================================"
