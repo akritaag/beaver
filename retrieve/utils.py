@@ -44,7 +44,7 @@ def format_table(table_name, corpus_tables, use_instance: bool, corpus_markdowns
     table_string.append(f"Example table content:\n{df_md}")
 
     if use_instance:
-        instances = corpus_tables[table_name]["instances"]
+        instances = corpus_tables[table_name]["example_columns"]
         table_string.append(f"Top-10 most occurring values for each column:")
         for col_idx, col_name in enumerate(cols):
             _instance = " | ".join([str(x) for x in instances[col_idx]])

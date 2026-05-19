@@ -47,7 +47,7 @@ class SQLPrompt(BasicPrompt):
         tables_json = json.load(open(osp.join(proj_dir, f'preprocessed_data/{args.dev}/tables_preprocessed.json'), 'r', encoding='utf-8'))
         
         # Use per-question gold tables if available (Option 2+), otherwise use all tables
-        gold_tables = example.get('gold_tables', []) if hasattr(args, 'dev') else []
+        gold_tables = example.get("tables", []) if hasattr(args, 'dev') else []
         
         if gold_tables:
             # Option 2+: Use only gold tables for this question

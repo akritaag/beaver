@@ -299,8 +299,8 @@ def convert_beaver_to_reforce(dataset, beaver_questions_path, beaver_tables_path
                 item['sql'] = current_sql
             
             # Fix gold_tables list casing
-            if 'gold_tables' in item:
-                gold_tables = item['tables']
+            if "tables" in item:
+                gold_tables = item["tables"]
                 fixed_gold_tables = []
                 for t in gold_tables:
                     k = get_table_key(t)
@@ -308,15 +308,15 @@ def convert_beaver_to_reforce(dataset, beaver_questions_path, beaver_tables_path
                         fixed_gold_tables.append(k)
                     else:
                         fixed_gold_tables.append(t.lower()) # Fallback
-                item['tables'] = fixed_gold_tables
+                item["tables"] = fixed_gold_tables
             
             # Fix mapping casing
-            if 'mapping' in item:
+            if "column_mapping" in item:
                 new_mapping = {}
-                for m_k, m_v in item['column_mapping'].items():
+                for m_k, m_v in item["column_mapping"].items():
                     new_m_v = [col.lower() for col in m_v]
                     new_mapping[m_k] = new_m_v
-                item['column_mapping'] = new_mapping
+                item["column_mapping"] = new_mapping
 
             # Fix join_keys casing
             if 'join_keys' in item:
@@ -373,7 +373,7 @@ def convert_beaver_to_reforce(dataset, beaver_questions_path, beaver_tables_path
         db_desc = "\n\n".join(db_desc_parts)
         
         # Add mapping info for options 2 and 3
-        if preprocessing_option >= 2 and 'mapping' in item:
+        if preprocessing_option >= 2 and 'column_mapping' in item:
             db_desc += add_mapping_info(item['column_mapping'])
         
         # Add join keys info for options 2 and 3

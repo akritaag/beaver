@@ -205,7 +205,7 @@ def main_postprocess(dataset, root_path, dev_json, mysql_credential_path, option
         elif isinstance(tables_data, dict):
             # Beaver format
             for table_key, table_info in tables_data.items():
-                if 'table_name_original' in table_info:
+                if 'table_name' in table_info:
                     schema_tables.append(table_info['table_name'])
                 else:
                      schema_tables.append(table_key)

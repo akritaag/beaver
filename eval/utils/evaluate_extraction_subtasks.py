@@ -99,7 +99,7 @@ def eval_extraction_output(extraction_output, gold_entry):
     
     # Flatten mapping dict
     gold_columns = []
-    if "mapping" in gold_entry:
+    if "column_mapping" in gold_entry:
         for k, v in gold_entry["column_mapping"].items():
             gold_columns.extend(v)
             
