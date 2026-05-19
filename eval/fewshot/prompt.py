@@ -145,9 +145,8 @@ def get_ete_prompts(dataset: str, q_fn: str, eval_config: EvalConfig, data_dir: 
             if structure_name and structure_name != 'real' and structure_name in structures:
                 structure = structures[structure_name]
                 instruction += f"\n\n{structure['structure']}"
-
-            # The following explanation describes which numbered subqueries you are given correspond to which query in the query structure you were provided:
-            instruction += f"\n\n{structure['subquery_decomposition']} "
+                # The following explanation describes which numbered subqueries you are given correspond to which query in the query structure you were provided:
+                instruction += f"\n\n{structure['subquery_decomposition']} "
 
         instruction += f"The SQL statement need to be wrapped in <ans></ans> tags."
 
