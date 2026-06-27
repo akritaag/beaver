@@ -51,6 +51,35 @@ Full-100, setting 1: high 23%, xhigh 25% (within run-to-run noise).
 - **Headroom:** the union of correct sets across runs (~39) exceeds any single
   run, indicating self-consistency / majority-vote ensembling is the next lever.
 
+## Hint ablation: is the decomposition hint worth it?
+Controlled ablation (Codex, high + explore/verify + fix), setting 2 with vs
+without `--decomp` (all else identical: gold tables + mapping + join keys +
+domain knowledge):
+
+| Config | exec acc | correct |
+|--------|:--------:|:-------:|
+| setting 2 (with decomp) | **34%** | 34 |
+| setting 2 − decomp | 28% | 28 |
+
+Per-question, decomposition **helps 13, hurts 7 → net +6**. It is net-**positive**
+despite occasionally backfiring. Don't drop it.
+
+## Failure analysis (setting 2 "values mismatch")
+Two dissected mismatches — both cases where the *decomposition* hint embedded
+gold-query scaffolding that contradicted the final ask, and the model baked it
+into the answer:
+- **dw_2933** — decomposition said "top 10 organizations"; the question asks "for
+  each organization". Agent added `LIMIT 10` → 10 rows vs gold's 154.
+- **dw_104** — decomposition mentioned "a window of 2 preceding and 1 following";
+  the question wants the *overall* average. Claude used a rolling
+  `AVG() OVER (... ROWS BETWEEN 2 PRECEDING AND 1 FOLLOWING)` (wrong per-row
+  deviations); Codex used `AVG() OVER ()` (overall) and got it right — a clean
+  backend-divergence case.
+
+Caveat (see ablation above): these are a real failure *mode* but a *minority* —
+the ablation shows decomposition is net-positive overall. Hand-picked errors
+identify modes; only the controlled run gives net impact.
+
 ## Reproduce
 ```bash
 # best config
