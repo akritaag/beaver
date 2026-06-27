@@ -7,6 +7,9 @@ on the standard 100-question `dev_sampled` set, scored against the live MySQL
 login). Every enhancement below is **gold-blind** — the agent never sees the
 expected/correct answer.
 
+> See `../claudeagent/RESULTS.md` for the Claude (`claude -p`) vs Codex
+> head-to-head and the cross-model ensembling finding.
+
 ## Scoreboard (`dw`, 100 questions, `high` reasoning effort)
 
 | Config | exec acc | correct | SQL errors | empty | mismatch |
