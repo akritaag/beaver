@@ -50,6 +50,26 @@ CODEX_SQL_FIX=1 CODEX_REASONING_EFFORT=high ./run.sh --dataset dw --setting 1
 ```
 Needs the dataset's MySQL DB loaded + `MYSQL_*` creds (read from env or nearest `.env`).
 
+### Execution-guided explore / decompose / review (optional, gold-blind)
+| var | default | meaning |
+|-----|---------|---------|
+| `CODEX_SQL_EXPLORE` | `0` | run read-only queries against the real tables, inspect the rows *its own* queries return, self-check, then finalize |
+| `CODEX_EXPLORE_STEPS` | `4` | max exploratory query rounds |
+| `CODEX_EXPLORE_ROWS` | `20` | rows returned per exploratory query |
+| `CODEX_DECOMPOSE` | `0` | prepend guidance to self-decompose and validate each sub-step with SQL |
+| `CODEX_REVIEW` | `0` | final subagent pass that reviews the answer vs the question for intent capture |
+
+All are gold-blind (DB access is mediated read-only by this process; the model
+never sees gold rows). Compose freely, e.g. explore + final fix:
+```bash
+CODEX_SQL_EXPLORE=1 CODEX_SQL_FIX=1 CODEX_REASONING_EFFORT=high ./run.sh --dataset dw --setting 2
+```
+
+> **Note (see RESULTS.md):** `explore/verify` helps (+3–4); but `CODEX_DECOMPOSE`
+> and `CODEX_REVIEW` are **net-negative on `dw`** (self-decompose −5, subagent
+> review −7 vs baseline) — a documented negative result, off by default. The
+> best config is the simple one: hints + explore + fix.
+
 ## Files
 | file | role | edit? |
 |------|------|-------|

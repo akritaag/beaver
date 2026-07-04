@@ -80,6 +80,32 @@ Caveat (see ablation above): these are a real failure *mode* but a *minority* �
 the ablation shows decomposition is net-positive overall. Hand-picked errors
 identify modes; only the controlled run gives net impact.
 
+## Negative result: self-decomposition and subagent review hurt
+Tested whether the agent's *own* reasoning could replace the provided
+decomposition hint: drop `--decomp`, then have the agent self-decompose +
+validate each sub-step with SQL (`CODEX_DECOMPOSE`), and/or add a final subagent
+that reviews the answer vs the question for intent (`CODEX_REVIEW`). Isolation
+(Codex, high, explore + fix, setting 2 minus decomp):
+
+| Config | exec acc | Δ vs baseline |
+|--------|:--------:|:-------------:|
+| neither (baseline, s2 − decomp) | 28% | — |
+| + self-decompose only | 23% | −5 |
+| + review only | 21% | −7 |
+| + both | 21% | −7 |
+| *(reference: s2 **with** decomp hint)* | *34%* | *+6* |
+
+Both components are **net-negative**. The **subagent review is the main culprit
+(−7)**: gold-blind, it rewrites already-correct queries into wrong ones (adds more
+errors than it removes). Self-decompose (−5) pushes toward more elaborate, fragile
+constructions. `both = review-only` → review dominates once present.
+
+**Throughline of the study's three "more reasoning" hypotheses — all refuted by
+controlled runs:** dropping the decomp hint hurt (−6); self-decomposing instead
+hurt (−5); adding a review subagent hurt most (−7). On BEAVER `dw` the oracle
+hints beat the agent's own reasoning, and self-critique without ground truth is
+actively harmful. Winner stays the simple recipe: **hints + explore + fix (34%)**.
+
 ## Reproduce
 ```bash
 # best config

@@ -54,6 +54,12 @@ CODEX_EXPLORE_STEPS = int(os.getenv("CODEX_EXPLORE_STEPS", "4"))
 CODEX_EXPLORE_ROWS = int(os.getenv("CODEX_EXPLORE_ROWS", "20"))
 CODEX_FIX_TIMEOUT_MS = int(os.getenv("CODEX_FIX_TIMEOUT_MS", "15000"))
 
+# Self-decompose the question (and validate each sub-step with SQL) instead of
+# relying on a provided decomposition hint.
+CODEX_DECOMPOSE = os.getenv("CODEX_DECOMPOSE", "0") not in ("0", "", "false", "False")
+# Final subagent pass that reviews the answer against the question for intent capture.
+CODEX_REVIEW = os.getenv("CODEX_REVIEW", "0") not in ("0", "", "false", "False")
+
 _READ_STMTS = ("select", "with", "show", "describe", "desc", "explain")
 _MAX_FEEDBACK_CHARS = 4000
 _MAX_CELL_CHARS = 80
@@ -237,6 +243,18 @@ def _fix_loop(base, model, db, sql):
     return sql
 
 
+_DECOMPOSE_GUIDANCE = """\
+
+### Approach: decompose, then validate each part with SQL
+Break the question into its sub-steps (filters, joins, groupings, aggregations,
+top-k/window pieces). For EACH sub-step, write a small SQL query and RUN it to
+confirm that piece returns sensible data — spot-check intermediate results (row
+counts, sample values, distinct keys, ranges) so each part looks valid before you
+compose them. Only after the parts check out, compose the full query, run it, and
+confirm the final rows match the question's intent.\
+"""
+
+
 _EXPLORE_PROTOCOL = """\
 
 ### Database access (read-only) — verification is REQUIRED
@@ -276,7 +294,8 @@ def _parse_action(text: str):
 
 
 def _run_explore(base, model, db):
-    transcript = base + _EXPLORE_PROTOCOL.format(db=db, steps=CODEX_EXPLORE_STEPS)
+    guidance = _DECOMPOSE_GUIDANCE if CODEX_DECOMPOSE else ""
+    transcript = base + guidance + _EXPLORE_PROTOCOL.format(db=db, steps=CODEX_EXPLORE_STEPS)
     last_sql = ""
     for step in range(CODEX_EXPLORE_STEPS):
         resp = _codex_call(transcript, model)
@@ -300,12 +319,35 @@ def _run_explore(base, model, db):
     return clean_sql(final) or last_sql
 
 
+def _review(question, sql, db, model):
+    """Subagent review: check the candidate query against the question for intent
+    capture, grounded in the query's own results (gold-blind). Returns a confirmed
+    or corrected query."""
+    preview = _query_preview(sql, db, CODEX_EXPLORE_ROWS)
+    prompt = (
+        "You are a strict reviewer subagent for a text-to-SQL task. Decide whether the candidate "
+        "MySQL query fully captures the INTENT of the question. Check for: missing or extra output "
+        "columns; wrong/missing filters; wrong aggregation scope (e.g. overall vs windowed/rolling "
+        "average); unintended LIMIT/top-k; wrong grouping granularity; missing joins or tables; "
+        "rounding when none was requested. You are given the query's ACTUAL result rows to "
+        "spot-check — you are NOT given the correct answer.\n\n"
+        f"QUESTION:\n{question}\n\nCANDIDATE SQL:\n{sql}\n\nITS RESULT (sample):\n{preview}\n\n"
+        "If the query correctly captures the intent, return it unchanged. Otherwise return a "
+        "corrected MySQL query that does. Output ONLY the final query wrapped in <ans></ans>."
+    )
+    revised = _codex_generate(prompt, model)
+    return revised or sql
+
+
 def run_agent(instance: dict, model: str) -> str:
     base = render_prompt(instance)
     db = instance.get("db") or "dw"
+    question = instance.get("question", "")
     if CODEX_SQL_EXPLORE:
         sql = _run_explore(base, model, db)
-        if CODEX_SQL_FIX:  # final error-repair pass on the explored answer
+        if CODEX_REVIEW and sql:  # subagent intent review
+            sql = _review(question, sql, db, model)
+        if CODEX_SQL_FIX:  # final error-repair pass
             sql = _fix_loop(base, model, db, sql)
         return sql
     if CODEX_SQL_FIX:
