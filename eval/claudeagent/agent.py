@@ -8,11 +8,16 @@
                       real tables, see the rows returned, self-check, finalize
 ============================================================================
 
-All DB access is mediated by THIS process: the model emits queries through a
-text protocol and we execute them read-only and feed back the rows. The model
-never gets credentials or filesystem access to the gold files. It can see the
-INPUT data (tables) and the rows ITS OWN queries return — never the
-correct/expected answer (gold SQL/results live in the JSON files, not in MySQL).
+The backend-agnostic machinery (response parsing, the read-only SQL guard,
+mediated DB access, credential stripping, the explore protocol) lives in
+eval/agent_common.py and is shared with eval/myagent. This file holds only the
+`claude -p` invocation and the Claude-specific mode orchestration.
+
+NOTE on isolation: `claude -p` runs with its default (read) tool access and no
+filesystem jail, so a determined model could still read files by absolute path.
+This is defense-in-depth for a cooperative model, not a hard security boundary —
+true isolation would require running the CLI in a container without the data/
+tree mounted (and/or restricting its tools).
 
 The prompt is passed to `claude -p` over stdin (BEAVER prompts are ~30 KB).
 
@@ -24,6 +29,7 @@ Config (env vars, all optional):
     CLAUDE_BIN              path to the claude binary (default: claude)
     CLAUDE_MODEL            value for `--model` (default: unset -> claude default)
     CLAUDE_TIMEOUT          per claude-call seconds (default: 300)
+    CLAUDE_MAX_RETRIES      retries for a failed/timed-out claude call (default: 2)
 
     CLAUDE_SQL_FIX          1 -> fix execution errors via error feedback (default 0)
     CLAUDE_FIX_ATTEMPTS     max fix rounds (default 2)
@@ -31,17 +37,42 @@ Config (env vars, all optional):
     CLAUDE_SQL_EXPLORE      1 -> explore/verify loop (overrides SQL_FIX alone) (default 0)
     CLAUDE_EXPLORE_STEPS    max exploratory query rounds (default 4)
     CLAUDE_EXPLORE_ROWS     max rows returned per exploratory query (default 20)
-    CLAUDE_FIX_TIMEOUT_MS   SELECT execution cap, ms (default 15000)
+    CLAUDE_FIX_TIMEOUT_MS   SELECT execution cap, ms (default 10000; keep <= the
+                            scorer's QUERY_TIMEOUT so a query the agent verifies
+                            as OK also passes scoring)
     MYSQL_HOST/USER/PASSWORD  DB creds (env or nearest .env)
 """
 import os
-import re
+import sys
+import time
 import subprocess
+
+# Shared, backend-agnostic primitives (eval/agent_common.py). eval/ is this
+# file's grandparent; add it to the path so the import resolves regardless of
+# the working directory execute.py is launched from.
+_EVAL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _EVAL_DIR not in sys.path:
+    sys.path.append(_EVAL_DIR)
+
+from agent_common import (  # noqa: E402
+    clean_sql,
+    render_prompt,
+    cli_env as _cli_env,
+    is_read_only as _is_read_only,
+    timed as _timed,
+    DBUnavailable as _DBUnavailable,
+    execute_sql as _execute_sql_raw,
+    query_preview as _query_preview_raw,
+    fix_prompt as _fix_prompt,
+    EXPLORE_PROTOCOL as _EXPLORE_PROTOCOL,
+    RUN_SQL_RE as _RUN_SQL_RE,
+)
 
 CLAUDE_BIN = os.getenv("CLAUDE_BIN", "claude")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL")  # None -> claude's default model; e.g. "opus", "sonnet"
 CLAUDE_EFFORT = os.getenv("CLAUDE_EFFORT")  # None -> default; e.g. "high" (--effort)
 CLAUDE_TIMEOUT = int(os.getenv("CLAUDE_TIMEOUT", "300"))
+CLAUDE_MAX_RETRIES = int(os.getenv("CLAUDE_MAX_RETRIES", "2"))
 
 CLAUDE_SQL_FIX = os.getenv("CLAUDE_SQL_FIX", "0") not in ("0", "", "false", "False")
 CLAUDE_FIX_ATTEMPTS = int(os.getenv("CLAUDE_FIX_ATTEMPTS", "2"))
@@ -49,220 +80,112 @@ CLAUDE_FIX_ATTEMPTS = int(os.getenv("CLAUDE_FIX_ATTEMPTS", "2"))
 CLAUDE_SQL_EXPLORE = os.getenv("CLAUDE_SQL_EXPLORE", "0") not in ("0", "", "false", "False")
 CLAUDE_EXPLORE_STEPS = int(os.getenv("CLAUDE_EXPLORE_STEPS", "4"))
 CLAUDE_EXPLORE_ROWS = int(os.getenv("CLAUDE_EXPLORE_ROWS", "20"))
-CLAUDE_FIX_TIMEOUT_MS = int(os.getenv("CLAUDE_FIX_TIMEOUT_MS", "15000"))
-
-_READ_STMTS = ("select", "with", "show", "describe", "desc", "explain")
-_MAX_FEEDBACK_CHARS = 4000
-_MAX_CELL_CHARS = 80
+CLAUDE_FIX_TIMEOUT_MS = int(os.getenv("CLAUDE_FIX_TIMEOUT_MS", "10000"))
 
 
-def clean_sql(text: str) -> str:
-    """Strip <ans></ans> tags and ```sql fences from a model response."""
-    if not text:
-        return ""
-    if "<ans>" in text:
-        text = text.split("<ans>")[-1]
-    if "</ans>" in text:
-        text = text.split("</ans>")[0]
-    if "```sql" in text:
-        text = text.split("```sql")[-1]
-    if "```" in text:
-        text = text.split("```")[0]
-    return text.strip()
+# ----------------------- claude -p invocation -----------------------
 
-
-def render_prompt(instance: dict) -> str:
-    """Flatten the chat-style prompt into one string for `claude -p`."""
-    blocks = []
-    user_seen = 0
-    for msg in instance["prompt"]:
-        role, content = msg["role"], msg["content"]
-        if role == "system":
-            blocks.append(content)
-        elif role == "assistant":
-            blocks.append(f"### Example answer\n{content}")
-        elif role == "user":
-            user_seen += 1
-            header = "### Example input" if user_seen == 1 else "### Now answer this"
-            blocks.append(f"{header}\n{content}")
-    return "\n\n".join(blocks)
-
-
-def _claude_call(prompt: str, model: str) -> str:
-    """One headless `claude -p` call -> raw stdout text."""
+def _claude_call(prompt: str) -> str:
+    """One headless `claude -p` call -> raw stdout text. Retries a failed/timed-out
+    call up to CLAUDE_MAX_RETRIES times so a transient CLI failure does not
+    silently become an empty prediction."""
     cmd = [CLAUDE_BIN, "-p", "--output-format", "text"]
     if CLAUDE_MODEL:
         cmd += ["--model", CLAUDE_MODEL]
     if CLAUDE_EFFORT:
         cmd += ["--effort", CLAUDE_EFFORT]
-    try:
-        proc = subprocess.run(
-            cmd, input=prompt, capture_output=True, text=True, timeout=CLAUDE_TIMEOUT,
-        )
-    except subprocess.TimeoutExpired:
-        raise RuntimeError(f"claude -p timed out after {CLAUDE_TIMEOUT}s")
-    if not (proc.stdout or "").strip() and proc.returncode != 0:
-        raise RuntimeError(f"claude -p failed (rc={proc.returncode}): {(proc.stderr or '')[-800:].strip()}")
-    return proc.stdout or ""
-
-
-def _claude_generate(prompt: str, model: str) -> str:
-    return clean_sql(_claude_call(prompt, model))
-
-
-# ----------------------- read-only DB access (gold-blind) -----------------------
-
-def _load_db_creds():
-    if not os.getenv("MYSQL_HOST"):
+    last_err = None
+    for attempt in range(CLAUDE_MAX_RETRIES + 1):
         try:
-            from dotenv import load_dotenv, find_dotenv
-            load_dotenv(find_dotenv(usecwd=True))
-        except Exception:
-            pass
-    return os.getenv("MYSQL_HOST", "localhost"), os.getenv("MYSQL_USER", "root"), os.getenv("MYSQL_PASSWORD", "")
+            proc = subprocess.run(
+                cmd, input=prompt, capture_output=True, text=True,
+                timeout=CLAUDE_TIMEOUT, env=_cli_env(),
+            )
+        except subprocess.TimeoutExpired:
+            last_err = f"claude -p timed out after {CLAUDE_TIMEOUT}s"
+        else:
+            out = proc.stdout or ""
+            if out.strip() or proc.returncode == 0:
+                return out
+            last_err = f"claude -p failed (rc={proc.returncode}): {(proc.stderr or '')[-800:].strip()}"
+        if attempt < CLAUDE_MAX_RETRIES:
+            time.sleep(2 * (attempt + 1))
+    raise RuntimeError(last_err or "claude -p failed")
 
 
-def _is_read_only(sql: str) -> bool:
-    first = (sql.lstrip().split(None, 1)[0].lower() if sql.strip() else "")
-    return first in _READ_STMTS
+def _claude_generate(prompt: str) -> str:
+    return clean_sql(_claude_call(prompt))
 
 
-def _connect(db):
-    import mysql.connector
-    h, u, p = _load_db_creds()
-    return mysql.connector.connect(host=h, user=u, password=p, database=db, connection_timeout=10)
-
-
+# DB access with this backend's execution timeout bound in (the primitives take
+# the cap as a parameter; these thin wrappers keep the internal call sites tidy).
 def _execute_sql(sql: str, db: str):
-    """Run read-only with a time cap. Returns (ok, error_str). Never inspects rows."""
-    if not _is_read_only(sql):
-        return False, f"refusing to execute non-read statement (starts with {sql.split(None,1)[:1]})"
-    conn = None
-    try:
-        conn = _connect(db)
-        cur = conn.cursor()
-        try:
-            cur.execute(f"SET SESSION max_execution_time={CLAUDE_FIX_TIMEOUT_MS}")
-        except Exception:
-            pass
-        cur.execute(sql)
-        cur.fetchmany(1)
-        return True, ""
-    except Exception as e:
-        return False, str(e)
-    finally:
-        try:
-            conn and conn.close()
-        except Exception:
-            pass
+    return _execute_sql_raw(sql, db, CLAUDE_FIX_TIMEOUT_MS)
 
 
 def _query_preview(sql: str, db: str, max_rows: int):
-    """Run read-only and return a compact text preview of up to max_rows rows."""
-    if not _is_read_only(sql):
-        return "ERROR: only read-only queries (SELECT/WITH/SHOW/DESCRIBE/EXPLAIN) are allowed here."
-    conn = None
-    try:
-        conn = _connect(db)
-        cur = conn.cursor()
-        try:
-            cur.execute(f"SET SESSION max_execution_time={CLAUDE_FIX_TIMEOUT_MS}")
-        except Exception:
-            pass
-        cur.execute(sql)
-        rows = cur.fetchmany(max_rows)
-        cols = [d[0] for d in cur.description] if cur.description else []
-        extra = f"\n... (truncated at {max_rows} rows)" if len(rows) == max_rows else ""
-
-        def fmt(v):
-            s = "NULL" if v is None else str(v)
-            return s if len(s) <= _MAX_CELL_CHARS else s[:_MAX_CELL_CHARS] + "…"
-
-        lines = [" | ".join(cols)] + [" | ".join(fmt(v) for v in r) for r in rows]
-        body = "\n".join(lines) + extra
-        if len(body) > _MAX_FEEDBACK_CHARS:
-            body = body[:_MAX_FEEDBACK_CHARS] + "\n… (output truncated)"
-        return f"{len(rows)} row(s) returned:\n{body}"
-    except Exception as e:
-        return f"ERROR: {e}"
-    finally:
-        try:
-            conn and conn.close()
-        except Exception:
-            pass
+    return _query_preview_raw(sql, db, max_rows, CLAUDE_FIX_TIMEOUT_MS)
 
 
 # ------------------------------- modes -------------------------------
 
-def _fix_prompt(base, db, bad_sql, error):
-    return (
-        base + f"\n\n### Execution feedback\nThe query below was run against the `{db}` MySQL "
-        f"database and FAILED TO EXECUTE. Fix it so it runs without error, keeping the intended "
-        f"logic.\n\nFailed SQL:\n{bad_sql}\n\nDatabase error:\n{error}\n\n"
-        f"Return only the corrected MySQL query wrapped in <ans></ans>."
-    )
-
-
-def _fix_loop(base, model, db, sql):
+def _fix_loop(base, db, sql):
     """Given a candidate SQL, repair execution errors (error feedback only)."""
     if not sql:
         return sql
     for _ in range(CLAUDE_FIX_ATTEMPTS):
-        ok, err = _execute_sql(sql, db)
+        try:
+            ok, err = _execute_sql(sql, db)
+        except _DBUnavailable as e:
+            # Can't verify (DB down / bad creds): do NOT rewrite a possibly-correct query.
+            print(f"DB unavailable; skipping fix loop, keeping candidate SQL: {e}")
+            break
         if ok:
             break
-        fixed = _claude_generate(_fix_prompt(base, db, sql, err), model)
+        fixed = _claude_generate(_fix_prompt(base, db, sql, err))
         if not fixed or fixed == sql:
             break
         sql = fixed
     return sql
 
 
-_EXPLORE_PROTOCOL = """\
-
-### Database access (read-only) — verification is REQUIRED
-You have live read-only access to the `{db}` MySQL database. You will be shown the rows YOUR queries return — you will NOT be shown the expected/correct answer.
-
-You MUST run at least one query to CHECK your candidate answer before finalizing: inspect the real tables (sample rows, distinct values, counts, ranges) to confirm your assumptions, then run your candidate query and verify the returned rows make sense for the question (right columns, plausible row count, filters/joins working, not empty when it shouldn't be). Revise if the results look wrong.
-
-Respond with EXACTLY ONE of the following each turn (nothing else):
-
-1) To run a read-only query (SELECT/WITH/SHOW/DESCRIBE/EXPLAIN), output:
-RUN_SQL:
-<one SQL statement>
-
-2) Only after you have verified, output your final answer as:
-<ans>YOUR FINAL MYSQL QUERY</ans>
-
-You have at most {steps} queries. Do not give <ans> until you have run at least one verification query.\
-"""
-
-
 def _parse_action(text: str):
-    """Return ('answer', sql) or ('run', query) from a model turn."""
-    if "<ans>" in text:
-        return "answer", clean_sql(text)
-    m = re.search(r"RUN_SQL:\s*", text)
-    if m:
-        q = text[m.end():].strip()
-        if "```" in q:
-            q = q.split("```")[1] if q.count("```") >= 2 else q.replace("```sql", "").replace("```", "")
-            q = q.replace("sql\n", "", 1).strip() if q.lower().startswith("sql") else q.strip()
-        q = q.split("<ans>")[0].strip()
+    """Return ('answer', sql) or ('run', query) from a model turn.
+
+    A RUN_SQL request takes precedence over a bare '<ans>' *mention* (e.g. the
+    model restating the protocol); only a complete <ans>...</ans> span is
+    treated as a final answer that overrides an accompanying RUN_SQL."""
+    if not text:
+        return "answer", ""
+    m = _RUN_SQL_RE.search(text)
+    has_complete_ans = "<ans>" in text and "</ans>" in text
+    if m and not has_complete_ans:
+        q = text[m.end():].split("<ans>", 1)[0]
+        q = clean_sql(q) if "```" in q else q.strip()
         return "run", q.strip()
     return "answer", clean_sql(text)
 
 
-def _run_explore(base, model, db):
+def _run_explore(base, db):
     transcript = base + _EXPLORE_PROTOCOL.format(db=db, steps=CLAUDE_EXPLORE_STEPS)
-    last_sql = ""
+    queries_run = 0
+    nudged = False
     for step in range(CLAUDE_EXPLORE_STEPS):
-        resp = _claude_call(transcript, model)
+        resp = _claude_call(transcript)
         action, payload = _parse_action(resp)
         if action == "answer" and payload:
+            # Enforce the protocol's "verify first" rule with a single nudge.
+            if queries_run == 0 and not nudged and step < CLAUDE_EXPLORE_STEPS - 1:
+                nudged = True
+                transcript += (
+                    f"\n\n### Proposed answer (NOT yet verified)\n{payload}\n\n"
+                    "You have not run any verification query. As required, run at least one "
+                    "read-only RUN_SQL query to check this answer before giving <ans>."
+                )
+                continue
             return payload
         if action == "run" and payload:
-            last_sql = payload
+            queries_run += 1
             result = _query_preview(payload, db, CLAUDE_EXPLORE_ROWS)
             transcript += (
                 f"\n\n### Your query (step {step + 1})\n{payload}\n\n### Result\n{result}\n\n"
@@ -270,21 +193,23 @@ def _run_explore(base, model, db):
             )
         else:
             break
+    # Out of steps (or no parseable action): force a final answer. Do NOT fall
+    # back to the last exploratory probe — a DESCRIBE/COUNT probe is not an answer.
     final = _claude_call(
         transcript + "\n\nYou must now output ONLY your final answer as <ans>YOUR MYSQL QUERY</ans>.",
-        model,
     )
-    return clean_sql(final) or last_sql
+    return clean_sql(final)
 
 
-def run_agent(instance: dict, model: str) -> str:
+def run_agent(instance: dict, model: str = None) -> str:
+    # `model` is a run label only (used for the output-dir name); the backend
+    # model is selected by the CLAUDE_MODEL env var, not this argument.
     base = render_prompt(instance)
     db = instance.get("db") or "dw"
     if CLAUDE_SQL_EXPLORE:
-        sql = _run_explore(base, model, db)
-        if CLAUDE_SQL_FIX:  # final error-repair pass on the explored answer
-            sql = _fix_loop(base, model, db, sql)
-        return sql
-    if CLAUDE_SQL_FIX:
-        return _fix_loop(base, model, db, _claude_generate(base, model))
-    return _claude_generate(base, model)
+        sql = _run_explore(base, db)
+    else:
+        sql = _claude_generate(base)
+    if CLAUDE_SQL_FIX and sql:  # final error-repair pass
+        sql = _fix_loop(base, db, sql)
+    return sql
