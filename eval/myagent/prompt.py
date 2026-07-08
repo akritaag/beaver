@@ -102,6 +102,10 @@ def _build_instruction(eval_config, q_knowledge, q_decomp, q, structures):
             "You must answer each subquery individually and then combine them to form the complete "
             "SQL statement. Each subquery you generate must be explicitly used in the final SQL "
             "statement, without being simplified. "
+            "The subqueries are scaffolding for how to STRUCTURE the SQL. If a subquery mentions a "
+            "filter, top-k limit, ranking, or extra total row that the final user question does not "
+            "ask for, the final user question always takes precedence: keep the subquery's structure "
+            "but do not carry the conflicting filter, limit, or extra rows/columns into the result. "
         )
         instruction += (
             "Below is the structure of the SQL statement with subqueries denoted. Each provided "
