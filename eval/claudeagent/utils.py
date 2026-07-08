@@ -4,12 +4,12 @@ from dataclasses import dataclass
 
 
 def read_json(fn):
-    with open(fn) as f:
+    with open(fn, encoding="utf-8") as f:
         return json.load(f)
 
 
 def write_json(obj, fn):
-    with open(fn, 'w') as f:
+    with open(fn, 'w', encoding="utf-8") as f:
         json.dump(obj, f, indent=2)
 
 

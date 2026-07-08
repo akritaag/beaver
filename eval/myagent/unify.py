@@ -38,7 +38,7 @@ def main():
     os.makedirs(generated_dir, exist_ok=True)
     os.makedirs(gold_dir, exist_ok=True)
 
-    with open(args.gold_file, 'r') as f:
+    with open(args.gold_file, 'r', encoding="utf-8") as f:
         gold_data = json.load(f)
     id_to_entry = {entry['id']: entry for entry in gold_data}
 
@@ -60,7 +60,7 @@ def main():
         real_id = gold_entry['id']
         gold_sql = gold_entry.get("sql", gold_entry.get("oracle_sql", gold_entry.get("gold_sql", "")))
 
-        with open(os.path.join(gold_dir, f"{real_id}.sql"), "w") as f:
+        with open(os.path.join(gold_dir, f"{real_id}.sql"), "w", encoding="utf-8") as f:
             f.write(gold_sql)
 
         result_sql_path = os.path.join(subdir_path, "result.sql")
@@ -71,10 +71,10 @@ def main():
 
         pred_sql = ""
         if os.path.exists(result_sql_path):
-            with open(result_sql_path, "r") as f:
+            with open(result_sql_path, "r", encoding="utf-8") as f:
                 pred_sql = f.read().strip()
 
-        with open(os.path.join(generated_dir, f"{real_id}.sql"), "w") as f:
+        with open(os.path.join(generated_dir, f"{real_id}.sql"), "w", encoding="utf-8") as f:
             f.write(pred_sql)
 
     print(f"Saved SQL files to {unified_dir}")

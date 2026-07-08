@@ -35,11 +35,18 @@ def _process(instance, model, output_dir):
         log = f"Error: {e}\n{traceback.format_exc()}"
         print(f"Error on {instance_id}: {e}")
 
-    os.makedirs(instance_dir, exist_ok=True)
-    with open(sql_file, "w") as f:
-        f.write(sql)
-    with open(log_file, "w") as f:
-        f.write(log)
+    # Writes are inside their own guard so a single failed write (bad locale,
+    # disk full, permissions) fails just this instance instead of aborting the
+    # whole batch via fut.result().
+    try:
+        os.makedirs(instance_dir, exist_ok=True)
+        with open(sql_file, "w", encoding="utf-8") as f:
+            f.write(sql)
+        with open(log_file, "w", encoding="utf-8") as f:
+            f.write(log)
+    except Exception as e:
+        print(f"Failed to write output for {instance_id}: {e}")
+        return instance_id, False
     return instance_id, bool(sql)
 
 
