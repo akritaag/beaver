@@ -270,6 +270,34 @@ paired / −4 e2e): on BEAVER, self-critique without ground truth is
 with `CODEX_REVIEW=0`. If ever revived, restrict the reviewer to *picking*
 among candidates (reordering can't break a bundle) — never editing them.
 
+## GPT-5.6 rerun of the best config: same coverage, worse candidate ranking
+Reran the best config (style guide v3 + schema skill + 3 candidates, setting 2,
+high, explore + fix) unchanged on the new Codex default model (`gpt-5.6-sol`,
+2026-07-10). Two results, one artifact:
+
+| Model | pass@1 (candidate 1) | pass@3 |
+|-------|:--------------------:|:------:|
+| gpt-5.5 (best run above) | **39%** | 49% |
+| gpt-5.6, raw run | 30% | 47% |
+| gpt-5.6, after entity fix | **33%** | **49%** |
+
+**Artifact:** gpt-5.6 HTML-escapes angle brackets inside `<ans>` spans on some
+answers (`&lt;&gt;` for `<>`, `&gt;` for `>`) — 8/100 predictions affected, 7 of
+them 1064 syntax errors at eval time; gpt-5.5 produced 0. `clean_sql` in
+`agent_common.py` now unescapes entities, and the 5.6 numbers above were
+rescored on the same generations with the escaping undone (SQL errors → 0).
+
+**Reading:** pass@3 is identical to 5.5 (49 vs 49, symmetric churn: lost
+dw_2878/3298/4570/5638, won dw_1570/2132/4771/779 — dw_779 finally flipped after
+merely "hedging" under 5.5). The pass@1 gap is a **ranking regression**: 5.6
+lost candidate-1 on 7 questions and won 1, but 5 of the 7 losses still pass via
+candidate 2/3 (match histogram c1/c2/c3: 5.5 = 39/9/1, 5.6 = 33/14/2). 5.6
+covers the same readings; it more often puts the gold-matching reading second.
+Same conclusion as before, now model-robust: the pass@3−pass@1 band (here 16
+pts) is where the value is, and a gold-blind selector over executed result sets
+remains the next experiment. Generation was noticeably faster (~28 min for 94
+questions, 4 workers).
+
 ## Reproduce
 ```bash
 # best config (single answer = candidate 1; pass@3 via --multi)

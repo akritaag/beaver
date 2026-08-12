@@ -29,6 +29,19 @@ MAX_FEEDBACK_CHARS = 4000
 MAX_CELL_CHARS = 80
 
 
+_HTML_ENTITY = re.compile(r"&(?:[a-zA-Z]+|#\d+|#x[0-9a-fA-F]+);")
+
+
+def _unescape_entities(sql: str) -> str:
+    """Undo HTML entity escaping (&lt; &gt; &amp; ...) some models apply inside
+    <ans> spans (first seen with gpt-5.6) — it turns comparison operators into
+    1064 syntax errors. Only touches strings that actually contain entities."""
+    if _HTML_ENTITY.search(sql):
+        import html
+        return html.unescape(sql)
+    return sql
+
+
 def clean_sql(text: str) -> str:
     """Extract the SQL from a model response.
 
@@ -39,9 +52,11 @@ def clean_sql(text: str) -> str:
     if not text:
         return ""
     text = text.strip()
+    if "<ans>" not in text and "&lt;ans&gt;" in text:
+        text = _unescape_entities(text)
     if "<ans>" in text:
         after = text.split("<ans>", 1)[1]
-        return after.split("</ans>", 1)[0].strip()
+        return _unescape_entities(after.split("</ans>", 1)[0].strip())
     if "```" in text:
         after = text.split("```", 1)[1]
         # Drop a leading language tag line (```sql / ```mysql / bare ```).
@@ -49,10 +64,10 @@ def clean_sql(text: str) -> str:
             first_line, rest = after.split("\n", 1)
             if first_line.strip().lower() in ("sql", "mysql", ""):
                 after = rest
-        return after.split("```", 1)[0].strip()
+        return _unescape_entities(after.split("```", 1)[0].strip())
     if text.lower().startswith("sql:"):
         text = text[len("sql:"):].strip()
-    return text.strip()
+    return _unescape_entities(text.strip())
 
 
 def render_prompt(instance: dict) -> str:
