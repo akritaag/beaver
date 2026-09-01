@@ -19,15 +19,18 @@ everything drops 2–4 points from gold-side failures alone. Three further golds
 |--------|:------:|:------:|
 | setting 2, one-shot, no techniques (control) | 35.5% | — |
 | full stack, setting 1 | 26.4% | 43.8% |
-| full stack, setting 2 | 29.8% | 47.9% |
-| full stack, setting 2, second seed | 28.1% | 46.3% |
+| full stack, setting 2 (3 seeds) | 29.8 / 28.1 / 29.8 | 47.9 / 46.3 / 47.9 |
 | claudeagent, setting 2, explore+fix | 30.6% | — |
 | cross-model selection (see below) | 33.9% | — |
 | **cross-model → judge selector stack** | **38.0%** | — |
 
 Full stack = the `dw` best config (fix + explore + style guide + schema skill +
-3 candidates). Two independent seeds differ by ~1.5 pts on both metrics, so
-run-to-run noise is small; deltas ≥3 pts are real. Candidate match histogram
+3 candidates). Three independent seeds span 1.7 pts on both metrics (seeds 1
+and 3 identical to the decimal), so run-to-run noise is small; deltas ≥3 pts
+are real. Seed 3 note: dw_real_82 was generated with the DB loops off — its
+explore pass produced a query whose post-timeout fetchall OOM-killed the
+process three times (a `timed()` daemon-thread can cap wall-clock but not
+memory; bounded fetch is the proper fix, TODO in agent_common). Candidate match histogram
 36/18/4 — candidate 2 carries 2× the weight it did on `dw` (18 vs 9); real
 questions are more ambiguous than the synthetic ones.
 
