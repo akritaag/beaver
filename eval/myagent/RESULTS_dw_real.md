@@ -1,126 +1,116 @@
 # myagent + claudeagent on BEAVER `dw_real`: results
 
-Evaluation on the **real-query split** (`dw_real`, 121 questions from actual MIT
-warehouse query logs — the seed corpus the synthetic sets were expanded from).
-Scored with `evaluate_ex_acc.py --dataset dw_real` against the live MySQL `dw`
-database. Backends: Codex CLI (`gpt-5.6-sol`, ChatGPT login) and Claude Code CLI
-(`claude-opus-5`). All techniques gold-blind; setting/hint definitions as in
-`RESULTS.md`.
+Same protocol as `RESULTS.md`, on the real-query split: 121 questions from
+actual MIT warehouse query logs (`dw_real/dev.json` — the seed corpus the
+synthetic sets were expanded from). Codex CLI = `gpt-5.6-sol` via ChatGPT
+login; Claude CLI = `claude-opus-5`. Everything gold-blind.
 
-> **Scoring environment matters (see "Benchmark integrity"):** 12/121 gold
-> queries reference lowercase table names and only execute where MySQL is
-> case-insensitive (macOS default; Linux requires
-> `--lower-case-table-names=1` at initialization). All numbers below are from
-> a case-insensitive database, matching macOS scoring. Under a strict-case
-> Linux default, every number drops 2–4 points from gold-side execution
-> failures alone.
+Scoring gotcha first, because it moves every number: 12/121 gold queries
+reference lowercase table names (`dw.employee_directory`, ...). MySQL on macOS
+is case-insensitive and runs them; a default Linux server errors them out, and
+the scorer then treats gold as empty. Numbers below are from a rebuilt DB with
+`--lower-case-table-names=1` (= macOS-comparable). On a strict-case server
+everything drops 2–4 points from gold-side failures alone. Three further golds
+(dw_real_20/49/57) have broken column refs and fail everywhere.
 
-## Scoreboard (`dw_real`, full 121-question `dev`, `high` effort)
+## Scoreboard (`dw_real`, full 121-question `dev`, high effort)
 
 | Config | cand-1 | pass@3 |
 |--------|:------:|:------:|
-| **few-shot control** (setting 2 hints, NO techniques, 1 answer) | **35.5%** | — |
-| full stack, setting 1 (schema hints only) | 26.4% | 43.8% |
-| full stack, setting 2 (all hints), seed 1 | 29.8% | 47.9% |
-| full stack, setting 2, seed 2 | 28.1% | 46.3% |
-| claudeagent, setting 2 (explore+fix only, 1 answer) | 30.6% | — |
-| **frozen selector stack (cross-confirm → judge) on seed 1** | **38.0%** | — |
+| setting 2, one-shot, no techniques (control) | 35.5% | — |
+| full stack, setting 1 | 26.4% | 43.8% |
+| full stack, setting 2 | 29.8% | 47.9% |
+| full stack, setting 2, second seed | 28.1% | 46.3% |
+| claudeagent, setting 2, explore+fix | 30.6% | — |
+| cross-model selection (see below) | 33.9% | — |
+| **cross-model → judge selector stack** | **38.0%** | — |
 
-Full stack = `CODEX_SQL_FIX=1 CODEX_SQL_EXPLORE=1 CODEX_STYLE_GUIDE=1
-CODEX_SCHEMA_SKILL=1 CODEX_N_CANDIDATES=3` (the `dw` best config from
-`RESULTS.md`). **Run-to-run variance is small**: two independent seeds differ
-by ~1.5 points on both cand-1 and pass@3, so deltas above ~3 points are
-meaningful. Matched-candidate histogram (seed 1): candidate 2 recovers 2× more
-than on `dw` — real questions are more ambiguous.
+Full stack = the `dw` best config (fix + explore + style guide + schema skill +
+3 candidates). Two independent seeds differ by ~1.5 pts on both metrics, so
+run-to-run noise is small; deltas ≥3 pts are real. Candidate match histogram
+36/18/4 — candidate 2 carries 2× the weight it did on `dw` (18 vs 9); real
+questions are more ambiguous than the synthetic ones.
 
-## Headline findings
+## The control beats the stack's candidate 1. The style guide is why.
 
-**1. The dw-fit style guide transfers NEGATIVELY to real queries.** The
-model-matched control (same model/effort/hints, zero techniques) beats the full
-stack's candidate 1 by ~6 points (35.5 vs 29.8). Failure taxonomy over all 89
-candidate-1 misses: **~61% involve COUNT vs COUNT(DISTINCT) / join-fan-out
-grain** — `dw_real` gold dedups pervasively, and style-guide rule 3 ("no
-DISTINCT unless the question says unique"), net-positive on `dw`, forces
-candidate 1 wrong here. A convention prior fit on synthetic questions is
-anti-correlated with real-query conventions. Planned: minus-style-guide
-ablation; grain-aware disambiguation (inject profiled key-cardinality/fan-out
-facts so the DISTINCT choice comes from data, not a static rule).
+35.5 vs 29.8: the no-technique control wins by ~6. Taxonomy of all 89
+candidate-1 misses (per-question dossiers: question + hints + gold + all
+candidates + executed rows): ~61% involve COUNT vs COUNT(DISTINCT) or
+fan-out-inflated aggregates. `dw_real` gold dedups by default; style-guide
+rule 3 says the opposite ("no DISTINCT unless the question says unique") and
+was fit on `dw`, where it gained +3. Here it systematically points candidate 1
+the wrong way. The house prior doesn't transfer from synthetic to real — it
+anti-transfers.
 
-**2. The techniques' value routes through selection, not through candidate 1.**
-The full pipeline (3 candidates + gold-blind selector stack) reaches **38.0%**,
-beating the control's 35.5% — even though its raw candidate 1 loses to the
-control. Ambiguity bracketing plus selection converts what convention priors
-cannot.
+But the pipeline still wins end-to-end: 3 candidates + a gold-blind selector →
+38.0, above the control's 35.5. Candidate 1 loses; the bracket + selection
+recovers more than rule 3 costs. The techniques' value routes through
+selection, not through the first guess.
 
-**3. Selector results** (frozen setting-2 seed-1 generations, all gold-blind):
+Taxonomy totals: underdetermined 40, gold-suspect 26 (12 = the lowercase golds,
+3 = broken columns, ~11 semantic), model-error 20, evaluator-artifact 2,
+hint-backfire 1. On `dw` hint-backfire was 10/65; on real questions the
+decomposition hints almost never contradict the final question.
 
-| Selector policy | accuracy | wins/losses vs always-c1 |
-|---|:---:|:---:|
-| always candidate 1 | 29.8% | — |
-| mechanical majority vote over own 3 candidates | 29.8% | 0/0 |
-| LLM judge (claude reads executed result previews), eager | +4 pts | 13/8 |
-| cross-backend confirmation (Claude result matches a Codex candidate) | 33.9% | **5/0** |
-| **cross-confirmation → eager-judge fallback** | **38.0%** | 12/1 |
-| pairwise both-orders probe judge (v3) | below v1 | over-switches |
+## Selectors (frozen setting-2 generations)
 
-- Majority voting recovers **nothing**: within-model candidates are correlated
-  voters (16/22 band questions have zero pairwise agreement; 6 agree on the
-  wrong answer). Consistent with published correlated-judge results
-  (`eval/READING_LIST.md`).
-- Cross-model agreement is a zero-loss intervention (5 wins, 0 losses — held
-  across both scoring regimes) and a strong confidence tier.
-- Pick-only judging works where the `RESULTS.md` editing reviewer hurt; a
-  fancier pairwise redesign underperformed the simple eager judge (positive
-  probe signal, over-aggressive switching).
+| Policy | acc | wins/losses vs c1 |
+|--------|:---:|:---:|
+| candidate 1 always | 29.8 | — |
+| majority vote over own 3 candidates | 29.8 | 0/0 |
+| LLM judge over executed result previews (eager) | +4 | 13/8 |
+| judge, "switch only if clearly convinced" | worse | 7/4 |
+| Claude's result matches a Codex candidate → take it | 33.9 | 5/0 |
+| **the two stacked: cross-match first, judge on the rest** | **38.0** | 12/1 |
+| pairwise both-orders judge w/ DISTINCT probe (v3) | < eager | over-switches |
 
-**4. Confidence tiers / deployment framing** (strict-case regime; to be
-refreshed): within-model unanimity ≈ 73% accurate (18% of questions);
-cross-confirmed ≈ 51% (42%); unconfirmed ≈ 16%. Candidate disagreement doubles
-as a gold-blind ambiguity detector: allowing one clarifying question on flagged
-cases is worth up to +18 points (the pass@3 band, converted through interaction
-instead of guessing).
+Self-consistency voting is dead on arrival here: on the 22 questions where c1
+is wrong but some candidate is right, 16 have zero pairwise agreement and 6
+agree on the *wrong* answer. Own-candidates are correlated voters. Cross-model
+agreement is the opposite: it never broke a correct c1 across two scoring
+regimes (5 wins, 0 losses), and as a confidence signal it splits the set into
+51%-accurate (confirmed, 51q) vs 16%-accurate (unconfirmed) tiers. Judging
+works only as *picking* — consistent with the `RESULTS.md` reviewer negative
+result; the fancier pairwise judge found 2 new grain wins but over-switched
+and netted below the plain eager one. Selector iteration frozen at the stack;
+further variants get tested on fresh seeds only.
 
-**5. Failure taxonomy** (89 c1-misses, per-question dossiers): underdetermined
-40, gold-suspect 26, model-error 20, evaluator-artifact 2, **hint-backfire 1**
-(vs 10 on `dw` — real questions' decomposition hints rarely contradict the
-final question).
+Within-model unanimity (all 3 candidates return the same rows) ≈ 73% accurate
+on 18% of questions — useless for selection, useful as a confidence rung.
+Candidate disagreement is a free ambiguity detector: granting the system one
+clarifying question on flagged cases is worth up to +18 (the whole pass@3
+band). Untried; needs an interaction protocol.
 
-## Benchmark integrity findings (for upstream report)
+## For upstream
 
-1. **12 gold queries reference lowercase table names** (`dw.employee_directory`,
-   `dw.academic_terms`, ...): scoring is platform-dependent unless the MySQL
-   server is case-insensitive. Recommend documenting
-   `--lower-case-table-names=1` in the benchmark setup instructions.
-2. **3 gold queries have broken column refs** (dw_real_20/49/57) — fail on any
-   platform.
-3. ~11 further golds are semantically suspect per the taxonomy
-   (fan-out-inflated aggregates; output columns contradicting the question
-   text). Same class the paper's own error analysis documents.
+- Document the case-sensitivity requirement (`lower_case_table_names=1`) or
+  regenerate the 12 lowercase golds; scoring is currently platform-dependent.
+- dw_real_20/49/57 golds don't execute anywhere (bad column refs).
+- ~11 more golds look inconsistent with their question text (fan-out-inflated
+  sums, missing/extra columns) — same class the paper's own error analysis
+  reports.
 
 ## Portability
 
-The fixes in this branch make both agents platform-neutral with no
-configuration: prompts go over stdin with explicit UTF-8 (Windows'
-command-line length cap and ANSI default encoding are both bypassed; no-ops
-elsewhere), and the CLI binary is resolved via `shutil.which` (`codex.cmd` on
-Windows, `codex` on macOS/Linux). `CODEX_BIN`/`CLAUDE_BIN` remain available
-as explicit overrides.
+Prompts now go to the CLIs over stdin with explicit UTF-8 (Windows cmd.exe
+caps argv at 8191 chars and defaults pipes to ANSI; both silently fatal for
+~30KB prompts with non-ASCII). Binaries resolve via `shutil.which` so bare
+`codex`/`claude` work on Windows (`.cmd`) and macOS alike. `CODEX_BIN`/
+`CLAUDE_BIN` still override. No behavior change off-Windows.
 
 ## Reproduce
 
 ```bash
-# full stack, real-query split
 cd eval/myagent
 CODEX_SQL_FIX=1 CODEX_SQL_EXPLORE=1 CODEX_STYLE_GUIDE=1 CODEX_SCHEMA_SKILL=1 \
 CODEX_N_CANDIDATES=3 CODEX_REASONING_EFFORT=high \
   ./run.sh --dataset dw_real --setting 2 --q_fn dev
 
-# score (from eval/) — DB must be case-insensitive (see integrity notes)
-uv run python evaluate_ex_acc.py --dataset dw_real --multi \
+cd .. && uv run python evaluate_ex_acc.py --dataset dw_real --multi \
   --input_dir unified-output/myagent/<run_name>
 ```
 
-In flight at time of writing: third seed of the full stack; refreshed
-confidence-tier numbers on the corrected scoring; grain-aware disambiguation
-experiment. Selector scripts currently live outside the repo (session
-scratchpad); to be added under `eval/selectors/` once stabilized.
+DB must be case-insensitive (see above). Third seed + grain-aware
+disambiguation (replace rule 3 with profiled fan-out facts; 54 target
+questions from the taxonomy) in progress. Selector scripts to land under
+`eval/selectors/` once stable.
