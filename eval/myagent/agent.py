@@ -154,10 +154,10 @@ def _codex_call(prompt: str) -> str:
         ]
         if CODEX_MODEL:
             cmd += ["-m", CODEX_MODEL]
-        cmd.append(prompt)
+        cmd.append("-")
         try:
             proc = subprocess.run(
-                cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                cmd, input=prompt, capture_output=True, text=True, encoding="utf-8",
                 timeout=CODEX_TIMEOUT, env=_cli_env(),
             )
             raw = ""

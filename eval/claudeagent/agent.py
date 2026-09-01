@@ -98,7 +98,7 @@ def _claude_call(prompt: str) -> str:
     for attempt in range(CLAUDE_MAX_RETRIES + 1):
         try:
             proc = subprocess.run(
-                cmd, input=prompt, capture_output=True, text=True,
+                cmd, input=prompt, capture_output=True, text=True, encoding="utf-8",
                 timeout=CLAUDE_TIMEOUT, env=_cli_env(),
             )
         except subprocess.TimeoutExpired:
