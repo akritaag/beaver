@@ -1,7 +1,7 @@
 # myagent + claudeagent on BEAVER `dw_real`: results
 
 Same protocol as `RESULTS.md`, on the real-query split: 121 questions from
-actual MIT warehouse query logs (`dw_real/dev.json` — the seed corpus the
+actual MIT warehouse query logs (`dw_real/dev.json`, the seed corpus the
 synthetic sets were expanded from). Codex CLI = `gpt-5.6-sol` via ChatGPT
 login; Claude CLI = `claude-opus-5`. Everything gold-blind.
 
@@ -17,21 +17,21 @@ everything drops 2–4 points from gold-side failures alone. Three further golds
 
 | Config | cand-1 | pass@3 |
 |--------|:------:|:------:|
-| setting 2, one-shot, no techniques (control) | 35.5% | — |
+| setting 2, one-shot, no techniques (control) | 35.5% | n/a |
 | full stack, setting 1 | 26.4% | 43.8% |
 | full stack, setting 2 (3 seeds) | 29.8 / 28.1 / 29.8 | 47.9 / 46.3 / 47.9 |
-| claudeagent, setting 2, explore+fix | 30.6% | — |
-| cross-model selection (see below) | 33.9% | — |
-| **cross-model → judge selector stack** | **38.0%** | — |
+| claudeagent, setting 2, explore+fix | 30.6% | n/a |
+| cross-model selection (see below) | 33.9% | n/a |
+| **cross-model → judge selector stack** | **38.0%** | n/a |
 
 Full stack = the `dw` best config (fix + explore + style guide + schema skill +
 3 candidates). Three independent seeds span 1.7 pts on both metrics (seeds 1
 and 3 identical to the decimal), so run-to-run noise is small; deltas ≥3 pts
-are real. Seed 3 note: dw_real_82 was generated with the DB loops off — its
+are real. Seed 3 note: dw_real_82 was generated with the DB loops off: its
 explore pass produced a query whose post-timeout fetchall OOM-killed the
 process three times (a `timed()` daemon-thread can cap wall-clock but not
 memory; bounded fetch is the proper fix, TODO in agent_common). Candidate match histogram
-36/18/4 — candidate 2 carries 2× the weight it did on `dw` (18 vs 9); real
+36/18/4, so candidate 2 carries 2× the weight it did on `dw` (18 vs 9); real
 questions are more ambiguous than the synthetic ones.
 
 ## The control beats the stack's candidate 1. The style guide is why.
@@ -42,7 +42,7 @@ candidates + executed rows): ~61% involve COUNT vs COUNT(DISTINCT) or
 fan-out-inflated aggregates. `dw_real` gold dedups by default; style-guide
 rule 3 says the opposite ("no DISTINCT unless the question says unique") and
 was fit on `dw`, where it gained +3. Here it systematically points candidate 1
-the wrong way. The house prior doesn't transfer from synthetic to real — it
+the wrong way. The house prior doesn't transfer from synthetic to real. It
 anti-transfers.
 
 But the pipeline still wins end-to-end: 3 candidates + a gold-blind selector →
@@ -59,7 +59,7 @@ decomposition hints almost never contradict the final question.
 
 | Policy | acc | wins/losses vs c1 |
 |--------|:---:|:---:|
-| candidate 1 always | 29.8 | — |
+| candidate 1 always | 29.8 | n/a |
 | majority vote over own 3 candidates | 29.8 | 0/0 |
 | LLM judge over executed result previews (eager) | +4 | 13/8 |
 | judge, "switch only if clearly convinced" | worse | 7/4 |
@@ -73,13 +73,13 @@ agree on the *wrong* answer. Own-candidates are correlated voters. Cross-model
 agreement is the opposite: it never broke a correct c1 across two scoring
 regimes (5 wins, 0 losses), and as a confidence signal it splits the set into
 51%-accurate (confirmed, 51q) vs 16%-accurate (unconfirmed) tiers. Judging
-works only as *picking* — consistent with the `RESULTS.md` reviewer negative
+works only as *picking*, consistent with the `RESULTS.md` reviewer negative
 result; the fancier pairwise judge found 2 new grain wins but over-switched
 and netted below the plain eager one. Selector iteration frozen at the stack;
 further variants get tested on fresh seeds only.
 
 Within-model unanimity (all 3 candidates return the same rows) ≈ 73% accurate
-on 18% of questions — useless for selection, useful as a confidence rung.
+on 18% of questions: useless for selection, useful as a confidence rung.
 Candidate disagreement is a free ambiguity detector: granting the system one
 clarifying question on flagged cases is worth up to +18 (the whole pass@3
 band). Untried; needs an interaction protocol.
@@ -90,7 +90,7 @@ band). Untried; needs an interaction protocol.
   regenerate the 12 lowercase golds; scoring is currently platform-dependent.
 - dw_real_20/49/57 golds don't execute anywhere (bad column refs).
 - ~11 more golds look inconsistent with their question text (fan-out-inflated
-  sums, missing/extra columns) — same class the paper's own error analysis
+  sums, missing/extra columns), the same class the paper's own error analysis
   reports.
 
 ## Portability
