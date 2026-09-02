@@ -86,6 +86,9 @@ and stay gitignored.
 
 - control 35.5: control run, scored without `--multi`
 - setting 1: 26.4 / 43.8: setting-1 run, `--multi`
+- setting 1 control 29.8: `CODEX_REASONING_EFFORT=high ./run.sh --dataset dw_real --setting 1 --q_fn dev`, no `--multi`
+- setting 1 claudeagent 29.8: claudeagent flags with `--setting 1`
+- setting 1 Concur 29.8: `concur.py` on the setting-1 full-stack run + the setting-1 claudeagent run
 - setting 2 seeds 29.8/28.1/29.8 and 47.9/46.3/47.9: three full-stack runs, `--multi`
 - claudeagent 30.6: claudeagent run, no `--multi`
 - cross-model selection 33.9: `cross_backend_vote.py` on seed 1 + claudeagent run

@@ -18,12 +18,20 @@ everything drops 2–4 points from gold-side failures alone.
 
 | Config | cand-1 | pass@3 |
 |--------|:------:|:------:|
+| setting 1, one-shot, no techniques (control) | 29.8% | n/a |
+| setting 1, full stack | 26.4% | 43.8% |
+| setting 1, claudeagent, explore+fix | 29.8% | n/a |
+| setting 1, **Concur** (full stack + selector) | **29.8%** | n/a |
 | setting 2, one-shot, no techniques (control) | 35.5% | n/a |
-| full stack, setting 1 | 26.4% | 43.8% |
-| full stack, setting 2 (3 seeds) | 29.8 / 28.1 / 29.8 | 47.9 / 46.3 / 47.9 |
-| claudeagent, setting 2, explore+fix | 30.6% | n/a |
-| cross-model selection (see below) | 33.9% | n/a |
-| **cross-model → judge selector stack** | **38.0%** | n/a |
+| setting 2, full stack (3 seeds) | 29.8 / 28.1 / 29.8 | 47.9 / 46.3 / 47.9 |
+| setting 2, claudeagent, explore+fix | 30.6% | n/a |
+| setting 2, cross-model selection only | 33.9% | n/a |
+| setting 2, **Concur** (full stack + selector) | **38.0%** | n/a |
+
+At setting 1 the selector adds 3.3 points to the generator (26.4 to 29.8) and
+lands level with the control; cross-model concurrence fired on 67 questions
+there versus 51 at setting 2. At both settings the plain model beats the
+generator's first candidate (setting 1 by 3.3, setting 2 by 5.7).
 
 Full stack = the `dw` best config (fix + explore + style guide + schema skill +
 3 candidates). Three independent seeds span 1.7 pts on both metrics (seeds 1
