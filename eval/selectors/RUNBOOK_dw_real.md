@@ -86,6 +86,6 @@ and stay gitignored.
 - setting 2 seeds 29.8/28.1/29.8 and 47.9/46.3/47.9: three full-stack runs, `--multi`
 - claudeagent 30.6: claudeagent run, no `--multi`
 - cross-model selection 33.9: `cross_backend_vote.py` on seed 1 + claudeagent run
-- stack 38.0: `stack_score.py` on seed 1 (cross-confirmation, then stored eager-judge pick)
-- tiers 51% / 16%, unanimity 73% on 18%, clarification +18: `cascade_tiers.py` on seed 1 (strict-case regime numbers as reported; rerun on the rebuilt DB to refresh)
+- stack 38.0: `concur.py` on seed 1 + the claudeagent run, scored with the plain scorer (equivalently `stack_score.py` on seed 1)
+- tiers 57% / 17%, unanimity 77% on 18%, clarification +22 (29.8 to 47.9): `cascade_tiers.py` on seed 1 after `refresh_matches.py` (all flags re-evaluated on the rebuilt DB)
 - taxonomy counts 40/26/20/2/1 and the 61% grain figure: `dossiers/TAXONOMY.md`
