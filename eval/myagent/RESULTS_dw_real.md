@@ -86,6 +86,33 @@ clarifying question on flagged cases is worth +22 questions, 29.8 to 47.9 (the
 whole pass@3 band), at the cost of asking on 82% of queries. Untried as an
 interaction; the numbers are the simulated ceiling (`selectors/cascade_tiers.py`).
 
+## Rule 3 ablation and the grain rule (54 flagged questions)
+
+The taxonomy's 54 count-distinct / fan-out questions, run three ways with the
+full stack (`grain_targets_dw_real.txt`; `dev_grain.json`). Baseline is the
+three seeds on the same 54.
+
+| Arm | cand-1 | pass@3 |
+|-----|:------:|:------:|
+| full stack, seeds 1/2/3 | 0 / 0 / 1 | 17 / 16 / 17 |
+| full stack minus the style guide (arm B) | 8 | 11 |
+| full stack, rule 3 replaced by the grain rule + profiled facts (arm A, `CODEX_GRAIN=1`) | **9** | **20** |
+
+Removing the whole guide recovers the first candidate on 8 questions (rule 3
+convicted: the model writes DISTINCT again) but drops pass@3 from 17 to 11,
+so the other eight rules earn their keep on coverage. Replacing only rule 3
+with the data-derived rule keeps them and wins on both: 9 first-candidate
+hits that no seed ever had, pass@3 20. The grain facts changed the first
+candidate to COUNT(DISTINCT) on 15 of the first 17 questions checked.
+
+Arm A's three pass@3 regressions are all gold going against its own data:
+dw_real_106 (profile finds no duplicate room keys, rule says plain COUNT, gold
+uses DISTINCT), dw_real_52 (profile finds multiplication, rule says DISTINCT,
+gold wants plain), dw_real_11 (the measure advice made the model pre-aggregate
+SUM(FEE) at its own grain; gold sums over the TIME_DAY fan-out). The measure
+advice should become informational rather than prescriptive. Full-split number
+for the grain rule (the other 67 questions) pending.
+
 ## For upstream
 
 - Document the case-sensitivity requirement (`lower_case_table_names=1`) or
