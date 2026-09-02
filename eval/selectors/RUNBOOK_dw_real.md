@@ -15,6 +15,7 @@ results file. Run directories land under `eval/unified-output/<agent>/<run>`.
 | claudeagent, explore+fix | from eval/claudeagent: `CLAUDE_SQL_FIX=1 CLAUDE_SQL_EXPLORE=1 CLAUDE_EFFORT=high ./run.sh --dataset dw_real --setting 2 --q_fn dev` |
 | grain arm A (54 targets) | full-stack flags + `CODEX_GRAIN=1`, `--q_fn dev_grain --num_workers 2`; build `data/dw_real/dev_grain.json` by filtering `dev.json` to `myagent/grain_targets_dw_real.txt`; profile facts first with `python grain_profile.py --q_fn dev` |
 | minus-style-guide ablation | full-stack flags without `CODEX_STYLE_GUIDE`, `--q_fn dev_grain` |
+| bracketing only (bare model, 3 candidates, no techniques) | `CODEX_N_CANDIDATES=3 CODEX_REASONING_EFFORT=high ./run.sh --dataset dw_real --setting 2 --q_fn dev`; then `selectors/concur.py` on it with the claudeagent run |
 
 Notes: `run.sh` uses `uv run python`; if that is blocked, call `execute.py` and
 `unify.py` directly with the same arguments (`--gold_tables --mapping
@@ -62,6 +63,7 @@ scorer, no `--multi`, it reproduces the 38.0 in the results table
 | stack (cross -> judge), plus tiers, modes, pass@2, clarification simulation | `python selectors/cascade_tiers.py <run>` | prints |
 | stack re-scored against fresh gold (post-rebuild) | `python selectors/stack_score.py <run>` | prints |
 | pairwise both-orders probe judge (v3) | `python selectors/judge_pairwise.py <run>` | `summary_judge_v3.json` |
+| verbalized self-confidence baseline (tiers, risk-coverage, AUROC) | `python selectors/self_confidence.py <run> [--candidate 1]` | `summary_self_confidence.json` |
 
 The judges call `claude -p` (Claude subscription); `cross_backend_vote.py`
 and `majority_vote.py` only execute SQL. Judge picks are gold-blind, so

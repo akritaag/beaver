@@ -3,7 +3,7 @@ show the judge (claude -p) the question + each candidate's SQL + a preview of
 its executed result set, and ask which candidate answers the question. Gold is
 never shown to the judge; it is only used afterward to score the judged pick.
 
-Usage: python select_judge.py <run_dir>   (run from eval/, needs claude.cmd on PATH)
+Usage: python judge.py <run_dir> [conservative]   (needs the claude CLI on PATH; CLAUDE_MODEL selects the model)
 """
 import sys
 import json
