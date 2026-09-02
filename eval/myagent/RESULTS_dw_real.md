@@ -46,6 +46,12 @@ GPT-5.6 rerun of the same generator config scored 33 / 49, one seed apart from
 the 32 / 47 run used here. At Setting 1 on `dw` the generator scores 25 / 34
 and Claude Opus 5 with exploration and repair 31.0.
 
+The judge stage is a model call with no temperature control, so its picks
+vary between runs. Three independent judge passes on the same `dw_real`
+Setting 2 candidates gave Concur 36.4, 40.5, and 37.2 (mean 38.0, which is
+the number in the table); the `dw` cells are single passes. Cross-model
+concurrence, which decides 42% of the questions, is deterministic.
+
 The experiments run on different model generations to decouple technique from
 model improvements. On `dw` the generator's techniques lift GPT-5.5 from 30 to
 39 pass@1, and plain GPT-5.6 with no techniques lands at 38. On GPT-5.6 the
