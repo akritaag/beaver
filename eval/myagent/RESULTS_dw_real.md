@@ -36,12 +36,14 @@ a pass@1.
 | 2 | Concur's generator, GPT-5.5 | 39 | 49 | not run | not run |
 | 2 | Plain GPT-5.6, one query, no techniques | 38.0 | n.a. | 35.5 | n.a. |
 | 2 | Claude Opus 5, one query, exploration and repair | 39.0 | n.a. | 30.6 | n.a. |
-| 2 | Concur's generator, GPT-5.6 | 33 | 49 | 29.8 | 47.9 |
-| 2 | Concur (generator + selector), GPT-5.6 + Opus 5 | pending | n.a. | 38.0 | n.a. |
+| 2 | Concur's generator, GPT-5.6 | 32 | 47 | 29.8 | 47.9 |
+| 2 | Concur (generator + selector), GPT-5.6 + Opus 5 | 38.0 | n.a. | 38.0 | n.a. |
 
 *Paper rows (arXiv 2409.02038v3, Table 6) are the whole benchmark, all three
 warehouses, averaged over seven models; the paper reports no per-question-set
-numbers at Settings 1 and 2. The GPT-5.5 rows are from `RESULTS.md`.
+numbers at Settings 1 and 2. The GPT-5.5 rows are from `RESULTS.md`; its
+GPT-5.6 rerun of the same generator config scored 33 / 49, one seed apart from
+the 32 / 47 run used here.
 
 The experiments run on different model generations to decouple technique from
 model improvements. On `dw` the generator's techniques lift GPT-5.5 from 30 to
