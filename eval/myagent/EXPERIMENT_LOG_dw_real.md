@@ -255,19 +255,19 @@ seeds, not the tuning seed.
 ## 10. Deployment reframing: confidence, abstention, and asking
 
 The selection work produced something we did not set out to build: a
-confidence signal. Cross-model agreement splits the questions into a 51%
-accurate tier and a 16% accurate tier; within-model unanimity (all three
-candidates returning identical rows) marks an 18% slice that is 73% accurate.
+confidence signal. Cross-model agreement splits the questions into a 57%
+accurate tier and a 17% accurate tier; within-model unanimity (all three
+candidates returning identical rows) marks an 18% slice that is 77% accurate.
 This turns the benchmark's all-or-nothing accuracy into a risk-coverage curve:
-answer only the confident tier at 51% precision, or answer everything at 38%.
+answer only the confident tier at 57% precision, or answer everything at 38%.
 
 It also gave a mechanical ambiguity detector: candidates disagreeing. The
 question we keep returning to is that a real analyst would not guess between
 "rows" and "distinct rooms"; they would ask. The benchmark cannot answer back,
 but it can bound the value of asking. If the system may pose one clarifying
 question on flagged cases, and the user's answer resolves exactly the axis the
-candidates disagree on, the ceiling is pass@3 on those cases: 26 to 45 points
-on the original scoring, about 18 points for one question. It asks on 82% of
+candidates disagree on, the ceiling is pass@3 on those cases: 29.8 to 47.9, about 18 points
+for one question. It asks on 82% of
 queries in the naive version, which is too chatty, and tuning the trigger is
 open work. But the shape of the claim is unusual and we think publishable:
 on real enterprise questions, one clarifying exchange is worth more than

@@ -64,7 +64,7 @@ decomposition hints almost never contradict the final question.
 | LLM judge over executed result previews (eager) | +4 | 13/8 |
 | judge, "switch only if clearly convinced" | worse | 7/4 |
 | Claude's result matches a Codex candidate → take it | 33.9 | 5/0 |
-| **the two stacked: cross-match first, judge on the rest** | **38.0** | 12/1 |
+| **the two stacked: cross-match first, judge on the rest** | **38.0** | 12/2 |
 | pairwise both-orders judge w/ DISTINCT probe (v3) | < eager | over-switches |
 
 Self-consistency voting is dead on arrival here: on the 22 questions where c1
@@ -72,17 +72,18 @@ is wrong but some candidate is right, 16 have zero pairwise agreement and 6
 agree on the *wrong* answer. Own-candidates are correlated voters. Cross-model
 agreement is the opposite: it never broke a correct c1 across two scoring
 regimes (5 wins, 0 losses), and as a confidence signal it splits the set into
-51%-accurate (confirmed, 51q) vs 16%-accurate (unconfirmed) tiers. Judging
+57%-accurate (confirmed, 51q) vs 17%-accurate (unconfirmed) tiers. Judging
 works only as *picking*, consistent with the `RESULTS.md` reviewer negative
 result; the fancier pairwise judge found 2 new grain wins but over-switched
 and netted below the plain eager one. Selector iteration frozen at the stack;
 further variants get tested on fresh seeds only.
 
-Within-model unanimity (all 3 candidates return the same rows) ≈ 73% accurate
+Within-model unanimity (all 3 candidates return the same rows) is 77% accurate
 on 18% of questions: useless for selection, useful as a confidence rung.
 Candidate disagreement is a free ambiguity detector: granting the system one
-clarifying question on flagged cases is worth up to +18 (the whole pass@3
-band). Untried; needs an interaction protocol.
+clarifying question on flagged cases is worth +22 questions, 29.8 to 47.9 (the
+whole pass@3 band), at the cost of asking on 82% of queries. Untried as an
+interaction; the numbers are the simulated ceiling (`selectors/cascade_tiers.py`).
 
 ## For upstream
 
@@ -113,7 +114,8 @@ cd .. && uv run python evaluate_ex_acc.py --dataset dw_real --multi \
   --input_dir unified-output/myagent/<run_name>
 ```
 
-DB must be case-insensitive (see above). Third seed + grain-aware
-disambiguation (replace rule 3 with profiled fan-out facts; 54 target
-questions from the taxonomy) in progress. Selector scripts to land under
-`eval/selectors/` once stable.
+DB must be case-insensitive (see above). Every number above maps to a command
+in `eval/selectors/RUNBOOK_dw_real.md`; the selector, cascade, audit, and
+dossier scripts live in `eval/selectors/`. Grain-aware disambiguation
+(`CODEX_GRAIN=1`, `myagent/grain_profile.py`; replaces rule 3 with profiled
+fan-out facts on the 54 flagged questions) is in progress.
