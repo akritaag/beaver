@@ -307,6 +307,25 @@ What is still open is the full split: a rule that helps the 54 flagged
 questions could hurt the other 67, and until those run the grain rule has a
 subset result, not a row in the table.
 
+## 10c. Is the whole apparatus overkill?
+
+The fair version of the question: plain GPT-5.6 with the same hints scores
+35.5 on one query. Concur scores 38.0 with two models and about ten calls per
+question. Three questions of gain, inside noise, at ten times the cost. So we
+ran the minimal pipeline: bare GPT-5.6 asked for three candidates and nothing
+else, then the same selector. If it reached 38, the generator's techniques
+were decoration.
+
+It reached 33.9, below its own first candidate. The bare model's alternatives
+rarely hold the right answer (5 plus 2 questions beyond candidate 1, against
+18 plus 4 for the full stack), so selection has nothing to recover and only
+its mistakes remain. The techniques we had been calling net negative are net
+negative for the first answer and net positive for the set: they spread the
+three candidates across the readings the question allows, which is exactly
+what a selector needs. The honest summary is not "the techniques hurt" or
+"the techniques help" but "the techniques move value from the first guess to
+the alternatives, and a selector is what turns that into accuracy."
+
 ## 11. Things that did not work, kept honestly
 
 - Majority vote over own candidates: zero gain (section 4).

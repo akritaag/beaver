@@ -91,6 +91,7 @@ and stay gitignored.
 - setting 1 Concur 29.8: `concur.py` on the setting-1 full-stack run + the setting-1 claudeagent run
 - setting 2 seeds 29.8/28.1/29.8 and 47.9/46.3/47.9: three full-stack runs, `--multi`
 - claudeagent 30.6: claudeagent run, no `--multi`
+- bare model + 3 candidates 35.5 / 41.3: bracketing-only run (see Generation), `--multi`; Concur on it 33.9: `concur.py` on that run + the setting-2 claudeagent run
 - cross-model selection 33.9: `cross_backend_vote.py` on seed 1 + claudeagent run
 - stack 38.0: `concur.py` on seed 1 + the claudeagent run, scored with the plain scorer (equivalently `stack_score.py` on seed 1)
 - tiers 57% / 17%, unanimity 77% on 18%, clarification +22 (29.8 to 47.9): `cascade_tiers.py` on seed 1 after `refresh_matches.py` (all flags re-evaluated on the rebuilt DB)

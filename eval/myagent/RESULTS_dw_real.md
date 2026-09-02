@@ -27,6 +27,8 @@ everything drops 2–4 points from gold-side failures alone.
 | setting 2, claudeagent, explore+fix | 30.6% | n/a |
 | setting 2, cross-model selection only | 33.9% | n/a |
 | setting 2, **Concur** (full stack + selector) | **38.0%** | n/a |
+| setting 2, bare model + 3 candidates only (no techniques) | 35.5% | 41.3% |
+| setting 2, Concur on those bare-model candidates | 33.9% | n/a |
 
 At setting 1 the selector adds 3.3 points to the generator (26.4 to 29.8) and
 lands level with the control; cross-model concurrence fired on 67 questions
@@ -42,6 +44,19 @@ process three times (a `timed()` daemon-thread can cap wall-clock but not
 memory; bounded fetch is the proper fix, TODO in agent_common). Candidate match histogram
 36/18/4, so candidate 2 carries 2× the weight it did on `dw` (18 vs 9); real
 questions are more ambiguous than the synthetic ones.
+
+## Is the generator overkill? No: its value is the candidate set.
+
+Bare GPT-5.6 asked for three candidates, with none of the techniques, gets
+35.5 / 41.3: candidate 1 identical to the one-query control, and only 7 more
+questions reachable through candidates 2 and 3 (histogram 43/5/2). The full
+stack's histogram is 36/18/4: a worse first guess, but 22 questions reachable
+through the alternatives. Run Concur's selector on the bare candidates and it
+loses ground, 35.5 to 33.9 (2 wins, 4 losses), because there is almost nothing
+for it to find. On the full stack's candidates it gains 8.2 (29.8 to 38.0).
+The exploration, repair, and prompt priors do not make the first answer
+better; they make the alternatives worth selecting from, and that is where
+the pipeline's margin over the plain model comes from.
 
 ## The control beats the stack's candidate 1. The style guide is why.
 
