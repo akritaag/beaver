@@ -1,5 +1,9 @@
 """Profile per-question join fan-out ("grain") facts, gold-blind.
 
+Output: dw_grain_facts.json, question id -> list of fact lines (dw and dw_real
+questions live in the same file; their ids do not collide). Re-running for a
+dataset merges, so profile dw_real dev and dw dev_sampled in turn.
+
 For each question: group the hinted join pairs by table pair (composite keys
 are measured together, not per column); for each join, measure rows vs
 distinct key values on each side to see which table's rows get multiplied.
@@ -112,7 +116,7 @@ def profile(records, db="dw"):
                                      f"so a plain COUNT over the joined result counts duplicates. To count distinct {concept}, use COUNT(DISTINCT {full}).")
                     else:
                         lines.append(f"- \"{concept}\" -> {full}: {own}; the hinted joins do not multiply {t} rows.")
-        out[r["id"]] = "\n".join(lines)
+        out[r["id"]] = lines
     conn.close()
     return out
 
@@ -126,8 +130,13 @@ def main():
     recs = json.load(open(os.path.join(here, "..", "..", "data", a.dataset, f"{a.q_fn}.json"), encoding="utf-8"))
     facts = profile(recs)
     path = os.path.join(here, "dw_grain_facts.json")
-    json.dump(facts, open(path, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
-    print(f"profiled {len(facts)} questions ({sum(1 for v in facts.values() if v)} with facts) -> {path}")
+    merged = {}
+    if os.path.exists(path):
+        merged = json.load(open(path, encoding="utf-8"))
+        merged = {k: (v.splitlines() if isinstance(v, str) else v) for k, v in merged.items()}
+    merged.update(facts)
+    json.dump(dict(sorted(merged.items())), open(path, "w", encoding="utf-8"), indent=2, ensure_ascii=False)
+    print(f"profiled {len(facts)} {a.dataset}/{a.q_fn} questions ({sum(1 for v in facts.values() if v)} with facts); file now holds {len(merged)} -> {path}")
 
 
 if __name__ == "__main__":

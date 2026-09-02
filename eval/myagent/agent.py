@@ -159,6 +159,8 @@ def _grain_section(qid):
     block = _grain_cache.get(qid)
     if not block:
         return ""
+    if isinstance(block, list):
+        block = "\n".join(block)
     return "\n\n### Grain facts for this question (profiled read-only)\n" + block
 
 
