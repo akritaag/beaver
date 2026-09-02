@@ -26,6 +26,17 @@ from pathlib import Path
 from _common import run_dir, candidates, dev_questions, CANDIDATE_SEP
 from utils.ex_acc import get_mysql_credentials, execute_sql_with_timeout, compare_results
 
+import os
+import shutil
+
+def _claude_cmd():
+    """Portable claude invocation; CLAUDE_MODEL selects the judge model
+    (e.g. claude-sonnet-4-5), default is the CLI's default (Opus 5)."""
+    cmd = [os.getenv("CLAUDE_BIN") or shutil.which("claude") or "claude", "-p", "--output-format", "text"]
+    if os.getenv("CLAUDE_MODEL"):
+        cmd += ["--model", os.getenv("CLAUDE_MODEL")]
+    return cmd
+
 SEP = CANDIDATE_SEP
 
 def norm_sql(s):
@@ -68,7 +79,7 @@ def ask(question, sql_a, prev_a, sql_b, prev_b, diff, axis_note):
     )
     try:
         proc = subprocess.run(
-            ["claude.cmd", "-p", "--output-format", "text"],
+            _claude_cmd(),
             input=prompt, capture_output=True, text=True, encoding="utf-8",
             timeout=180,
         )
