@@ -276,6 +276,37 @@ open work. But the shape of the claim is unusual and we think publishable:
 on real enterprise questions, one clarifying exchange is worth more than
 every prompt technique combined.
 
+## 10b. Convicting rule 3, and what replaces it
+
+Two runs on the 54 questions the taxonomy flagged, keeping the full stack in
+both. First, the style guide removed entirely: first-candidate accuracy went
+from 0 of 54 (all three seeds) to 8, and pass@3 fell from 17 to 11. So the
+rule was the damage, and the other eight rules were doing real work on
+coverage that we would have thrown away with them. Second, rule 3 alone
+replaced by a data-derived rule: profile each question's hinted joins for row
+multiplication, tell the model which counted columns get duplicated and which
+measures get inflated, and let it decide DISTINCT from that. First-candidate
+accuracy 9 of 54, pass@3 20, better than the seeds on both, with no other
+rule touched. The facts visibly changed what the model wrote: on the first 17
+questions checked, 15 first candidates switched from plain COUNT to
+COUNT(DISTINCT).
+
+The three questions the grain rule lost are the ones worth remembering. On
+one, the profile found no duplicate room keys, the rule said plain COUNT, and
+gold used DISTINCT anyway. On another, the profile found multiplication, the
+rule said DISTINCT, and gold wanted plain counts. On the third, the advice to
+aggregate a measure at its own grain made the model pre-aggregate a SUM that
+gold computes over the fan-out. In all three the reference query disagrees
+with what its own data implies. No rule derived from the data can reach those,
+and the honest write-up says so: the data-derived rule fixes the cases where
+the reference author was consistent with the data, and loses the cases where
+they were not. The measure advice should be demoted from an instruction to a
+fact.
+
+What is still open is the full split: a rule that helps the 54 flagged
+questions could hurt the other 67, and until those run the grain rule has a
+subset result, not a row in the table.
+
 ## 11. Things that did not work, kept honestly
 
 - Majority vote over own candidates: zero gain (section 4).
