@@ -15,6 +15,7 @@ results file. Run directories land under `eval/unified-output/<agent>/<run>`.
 | claudeagent, explore+fix | from eval/claudeagent: `CLAUDE_SQL_FIX=1 CLAUDE_SQL_EXPLORE=1 CLAUDE_EFFORT=high ./run.sh --dataset dw_real --setting 2 --q_fn dev` |
 | grain arm A (54 targets) | full-stack flags + `CODEX_GRAIN=1`, `--q_fn dev_grain --num_workers 2`; build `data/dw_real/dev_grain.json` by filtering `dev.json` to `myagent/grain_targets_dw_real.txt`; profile facts first with `python grain_profile.py --q_fn dev` |
 | minus-style-guide ablation | full-stack flags without `CODEX_STYLE_GUIDE`, `--q_fn dev_grain` |
+| grain rule, full 121 (= arm A + arm C) | arm A on `dev_grain` (54) and the same flags on `dev_grain_rest` (the other 67, `data/dw_real/dev_grain_rest.json` = complement of the target list); then `python selectors/merge_runs.py unified-output/myagent/<grain-full> <arm A dir> <arm C dir>` and score the merged dir with `--multi`; `selectors/concur.py` on it for the selector row |
 | bracketing only (bare model, 3 candidates, no techniques) | `CODEX_N_CANDIDATES=3 CODEX_REASONING_EFFORT=high ./run.sh --dataset dw_real --setting 2 --q_fn dev`; then `selectors/concur.py` on it with the claudeagent run |
 
 Notes: `run.sh` uses `uv run python`; if that is blocked, call `execute.py` and
