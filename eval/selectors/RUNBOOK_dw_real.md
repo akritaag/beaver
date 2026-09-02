@@ -36,7 +36,22 @@ and the run resumed (`--resume <output dir>`).
 `--multi` is mandatory for `CODEX_N_CANDIDATES>1` runs; without it the three
 candidates are executed as one string.
 
-## Selectors (all on the frozen setting-2 seed-1 generations)
+## Concur end to end (the method as one command)
+
+Stage 1 is two generation runs: the full-stack Codex run (3 candidates per
+question) and the claudeagent run (1 answer per question), commands above.
+Stage 2 is one script that combines them into a single-answer run directory:
+
+    python selectors/concur.py unified-output/myagent/<codex run> unified-output/claudeagent/<claude run>
+    python evaluate_ex_acc.py --dataset dw_real --input_dir unified-output/concur/<out>
+
+It selects by cross-model concurrence where Claude's result matches a Codex
+candidate, and otherwise by the judge (reusing `summary_judge.json` if
+`judge.py` was already run, else calling `claude -p`). Scored with the plain
+scorer, no `--multi`, it reproduces the 38.0 in the results table
+(`concur_selection.json` records which rule chose each answer).
+
+## Selectors (the individual policies, all on the frozen setting-2 seed-1 generations)
 
 | Row in selector table | Command (from eval/) | Output file in run dir |
 |---|---|---|
