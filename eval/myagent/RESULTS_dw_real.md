@@ -29,7 +29,7 @@ a pass@1.
 | Setting | Config | dw pass@1 | dw pass@3 | dw_real pass@1 | dw_real pass@3 |
 |:---:|---|:---:|:---:|:---:|:---:|
 | 1 | Paper, ReFoRCE* | 18.9 | not reported | 18.9 | not reported |
-| 1 | Concur (generator + selector), GPT-5.6 + Opus 5 | pending | n.a. | 29.8 | n.a. |
+| 1 | Concur (generator + selector), GPT-5.6 + Opus 5 | 28.0 | n.a. | 29.8 | n.a. |
 | 2 | Paper, ReFoRCE* | 25.9 | not reported | 25.9 | not reported |
 | 2 | Paper, Few-shot* | 23.1 | not reported | 23.1 | not reported |
 | 2 | GPT-5.5, one query, repair only | 30 | n.a. | not run | n.a. |
@@ -43,7 +43,8 @@ a pass@1.
 warehouses, averaged over seven models; the paper reports no per-question-set
 numbers at Settings 1 and 2. The GPT-5.5 rows are from `RESULTS.md`; its
 GPT-5.6 rerun of the same generator config scored 33 / 49, one seed apart from
-the 32 / 47 run used here.
+the 32 / 47 run used here. At Setting 1 on `dw` the generator scores 25 / 34
+and Claude Opus 5 with exploration and repair 31.0.
 
 The experiments run on different model generations to decouple technique from
 model improvements. On `dw` the generator's techniques lift GPT-5.5 from 30 to
