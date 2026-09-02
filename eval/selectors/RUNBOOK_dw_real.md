@@ -96,3 +96,6 @@ and stay gitignored.
 - stack 38.0: `concur.py` on seed 1 + the claudeagent run, scored with the plain scorer (equivalently `stack_score.py` on seed 1)
 - tiers 57% / 17%, unanimity 77% on 18%, clarification +22 (29.8 to 47.9): `cascade_tiers.py` on seed 1 after `refresh_matches.py` (all flags re-evaluated on the rebuilt DB)
 - taxonomy counts 40/26/20/2/1 and the 61% grain figure: `dossiers/TAXONOMY.md`
+- grain rule, full 121, 35.5 / 48.8: `merge_runs.py` of the arm A (54) and arm C (67) dirs into `unified-output/myagent/codex-beaver-dw_real-setting2-grain-full`, then `--multi`
+- Concur on the grain candidates 33.9: `concur.py` on that merged dir + the setting-2 claudeagent run, plain scorer
+- dw column (100 sampled, setting 2): control 38.0 = `CODEX_REASONING_EFFORT=high` run with `--dataset dw --q_fn dev_sampled`, no `--multi`; Opus 5 explore+fix 39.0 = claudeagent flags with `--dataset dw`; `concur.py` reads the dataset from the codex run directory name, so the same commands score dw

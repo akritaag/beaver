@@ -303,9 +303,8 @@ the reference author was consistent with the data, and loses the cases where
 they were not. The measure advice should be demoted from an instruction to a
 fact.
 
-What is still open is the full split: a rule that helps the 54 flagged
-questions could hurt the other 67, and until those run the grain rule has a
-subset result, not a row in the table.
+The full split is in section 10d; the subset numbers above are superseded
+by it and kept here as the path.
 
 ## 10c. Is the whole apparatus overkill?
 
@@ -326,6 +325,36 @@ what a selector needs. The honest summary is not "the techniques hurt" or
 "the techniques help" but "the techniques move value from the first guess to
 the alternatives, and a selector is what turns that into accuracy."
 
+## 10d. The grain rule on all 121, and the selector on top
+
+The other 67 questions ran overnight (the driver died silently once at 25 and
+was resumed with one worker; every resume today has survived and every
+two-worker full-stack driver has died early, which is now the working rule
+for this machine). Merged with the 54, scored as one run: candidate 1 35.5,
+pass@3 48.8, against the frozen generator's 29.8 and 47.9. The rule lifts the
+first candidate by 5.7 points to exactly the plain-model control. That was the
+hypothesis of 10b and it held on the full set, not just the flagged subset.
+
+Then Concur on those candidates: 33.9. Below the generator's own candidate 1,
+7 wins to 9 losses, and below the 38.0 the same selector reaches on the frozen
+candidates. Concurrence fired on 42 questions instead of 51, so 79 went to the
+judge, and the judge walked away from a correct candidate 1 twelve times. This
+is the second time the selector has lost ground on a candidate set with a
+strong first candidate; it did the same on the bare model's candidates (also
+33.9). The selector was tuned, in effect, on a generator whose first guess was
+weak and whose alternatives were rich, and it carries that bias: it switches
+too readily. Improve the first guess and the same switching rate becomes a
+cost.
+
+So the two improvements do not stack, and the honest summary is that we now
+have two 35-38 systems built on opposite bets: a good first guess with no
+selection, or a weak first guess with selection. The next selector has to know
+which regime it is in. Two cheap candidates: trust candidate 1 unless
+concurrence points elsewhere (drop the judge), or let the judge switch only
+when the generator's own prior was the synthetic-fit style guide. Neither has
+been run. The grain rule stays in the code behind its flag and out of the
+method description until one of them does.
+
 ## 11. Things that did not work, kept honestly
 
 - Majority vote over own candidates: zero gain (section 4).
@@ -333,6 +362,8 @@ the alternatives, and a selector is what turns that into accuracy."
 - Pairwise both-orders probe judge: real probe signal, over-switching, net
   worse than the naive judge.
 - The synthetic-fit style guide on real queries: net negative on candidate 1.
+- The selector on top of the grain-rule generator: 33.9, below both the
+  generator's candidate 1 and Concur on the frozen candidates (section 10d).
 - Editing reviewers (Ankit, four variants): all negative.
 - Two runs killed silently by an unbounded fetch after a query timeout on one
   question; the timeout wraps `fetchall` in a thread it cannot stop. The fix
@@ -353,13 +384,14 @@ Cannot, yet: that the techniques beat the paper's baselines on the paper's
 own full question set (we ran one warehouse's real split); that the gap to
 the paper's 25.9% is technique rather than model, except through our own
 control (the paper's baselines on GPT-5.6 have not been run); that the grain
-hypothesis fixes the rule-3 damage (untested); that the selector stack holds
-on the other warehouses.
+rule and the selector can be made to stack (they cancel today, section 10d);
+that the selector stack holds on the other warehouses.
 
 ## 13. Next
 
-Grain-aware disambiguation on the 54 flagged questions, replacing rule 3
-with profiled fan-out facts. The minus-style-guide ablation, to put a number
-on rule 3's cost in isolation. Refreshed confidence tiers on the corrected
-database. A clarification protocol with a tuned trigger. Then the same
-questions on nova and neutron, if the leaderboard requires them.
+A selector that knows when the first candidate is trustworthy, so the grain
+rule and selection stack instead of cancelling (section 10d). The dw column
+for the leaderboard email: plain GPT-5.6 control (done, 38.0), Opus 5 witness
+(done, 39.0), Concur at settings 1 and 2 (running). Refreshed confidence
+tiers on the corrected database. A clarification protocol with a tuned
+trigger. Then nova and neutron, if the leaderboard requires them.

@@ -12,7 +12,7 @@ in a different case than it was declared. MySQL on macOS is case-insensitive
 and runs them all; a default Linux server errors them out, and the scorer then
 treats gold as empty. Numbers below are from a rebuilt DB with
 `--lower-case-table-names=1` (= macOS-comparable). On a strict-case server
-everything drops 2–4 points from gold-side failures alone.
+everything drops 2 to 4 points from gold-side failures alone.
 
 ## Scoreboard (`dw_real`, full 121-question `dev`, high effort)
 
@@ -29,6 +29,8 @@ everything drops 2–4 points from gold-side failures alone.
 | setting 2, **Concur** (full stack + selector) | **38.0%** | n/a |
 | setting 2, bare model + 3 candidates only (no techniques) | 35.5% | 41.3% |
 | setting 2, Concur on those bare-model candidates | 33.9% | n/a |
+| setting 2, full stack with the grain rule (rule 3 replaced by profiled fan-out facts) | 35.5% | 48.8% |
+| setting 2, Concur on the grain-rule candidates | 33.9% | n/a |
 
 At setting 1 the selector adds 3.3 points to the generator (26.4 to 29.8) and
 lands level with the control; cross-model concurrence fired on 67 questions
@@ -109,32 +111,43 @@ clarifying question on flagged cases is worth +22 questions, 29.8 to 47.9 (the
 whole pass@3 band), at the cost of asking on 82% of queries. Untried as an
 interaction; the numbers are the simulated ceiling (`selectors/cascade_tiers.py`).
 
-## Rule 3 ablation and the grain rule (54 flagged questions)
+## The grain rule: rule 3 replaced by profiled fan-out facts (all 121)
 
-The taxonomy's 54 count-distinct / fan-out questions, run three ways with the
-full stack (`grain_targets_dw_real.txt`; `dev_grain.json`). Baseline is the
-three seeds on the same 54.
+Rule 3 of the style guide ("no DISTINCT unless the question says unique") was
+fit on `dw` and points candidate 1 the wrong way on `dw_real` (previous
+section). `CODEX_GRAIN=1` replaces that one rule with facts profiled from the
+data per question (`myagent/grain_profile.py`): which hinted joins multiply
+rows, which counted columns therefore repeat, which measures get inflated.
+The other eight rules stay. Run on the full 121 with the full stack, one seed.
 
-| Arm | cand-1 | pass@3 |
+| Generator, setting 2 | cand-1 | pass@3 |
 |-----|:------:|:------:|
-| full stack, seeds 1/2/3 | 0 / 0 / 1 | 17 / 16 / 17 |
-| full stack minus the style guide (arm B) | 8 | 11 |
-| full stack, rule 3 replaced by the grain rule + profiled facts (arm A, `CODEX_GRAIN=1`) | **9** | **20** |
+| full stack, frozen seed 1 | 29.8 | 47.9 |
+| full stack, grain rule | 35.5 | 48.8 |
+| Concur on the frozen candidates | 38.0 | n/a |
+| Concur on the grain-rule candidates | 33.9 | n/a |
 
-Removing the whole guide recovers the first candidate on 8 questions (rule 3
-convicted: the model writes DISTINCT again) but drops pass@3 from 17 to 11,
-so the other eight rules earn their keep on coverage. Replacing only rule 3
-with the data-derived rule keeps them and wins on both: 9 first-candidate
-hits that no seed ever had, pass@3 20. The grain facts changed the first
-candidate to COUNT(DISTINCT) on 15 of the first 17 questions checked.
+The rule does what it was built to do: candidate 1 rises 5.7 points to
+exactly the plain-model control (35.5), coverage gains one question. Then the
+selector loses it back. On the grain candidates Concur scores 33.9, below the
+generator's own candidate 1 (7 wins, 9 losses) and below the 38.0 it reaches
+on the frozen candidates (4 wins, 9 losses head to head). Cross-model
+concurrence fired on 42 questions instead of 51, so more questions went to the
+judge, and the judge switched away from a correct candidate 1 on 12 of the 43
+it had. The pattern is the same as on the bare-model candidates (also 33.9):
+once candidate 1 is already good, the selector has less to find and more to
+break. Selection only pays when the first guess is weak and the alternatives
+are strong, which is exactly the frozen generator's shape (36/18/4).
 
-Arm A's three pass@3 regressions are all gold going against its own data:
-dw_real_106 (profile finds no duplicate room keys, rule says plain COUNT, gold
-uses DISTINCT), dw_real_52 (profile finds multiplication, rule says DISTINCT,
-gold wants plain), dw_real_11 (the measure advice made the model pre-aggregate
-SUM(FEE) at its own grain; gold sums over the TIME_DAY fan-out). The measure
-advice should become informational rather than prescriptive. Full-split number
-for the grain rule (the other 67 questions) pending.
+So the grain rule is a real generator improvement and a real selector
+regression, and the two cancel. It stays out of the method for now. The next
+experiment is a selector that trusts candidate 1 more when the generator's
+own prior is data-derived, or a concurrence-only stack with no judge.
+
+Two earlier subset results are superseded by the table above and kept only in
+the experiment log: the 54 flagged questions alone (grain rule 9/20 versus
+seeds 0-1/16-17; no style guide 8/11), and the three gold-against-its-own-data
+regressions (dw_real_106, 52, 11) found there, which still hold.
 
 ## For upstream
 
@@ -170,5 +183,5 @@ cd .. && uv run python evaluate_ex_acc.py --dataset dw_real --multi \
 DB must be case-insensitive (see above). Every number above maps to a command
 in `eval/selectors/RUNBOOK_dw_real.md`; the selector, cascade, audit, and
 dossier scripts live in `eval/selectors/`. Grain-aware disambiguation
-(`CODEX_GRAIN=1`, `myagent/grain_profile.py`; replaces rule 3 with profiled
-fan-out facts on the 54 flagged questions) is in progress.
+(`CODEX_GRAIN=1`, `myagent/grain_profile.py`) replaces rule 3 with profiled
+fan-out facts; profile first with `python grain_profile.py --q_fn dev`.

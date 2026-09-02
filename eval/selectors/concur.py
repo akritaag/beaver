@@ -14,7 +14,8 @@ Policy (gold-blind):
 
 Usage (from eval/):
   python selectors/concur.py <codex_run_dir> <claude_run_dir> [out_dir]
-Then: python evaluate_ex_acc.py --dataset dw_real --input_dir <out_dir>
+Then: python evaluate_ex_acc.py --dataset <dataset> --input_dir <out_dir>
+The dataset (dw_real, dw, nova, neutron) is read from the codex run directory name.
 """
 import sys
 import json
@@ -30,10 +31,13 @@ out = Path(sys.argv[3]) if len(sys.argv) > 3 else EVAL / "unified-output" / "con
 (out / "generated").mkdir(parents=True, exist_ok=True)
 (out / "gold").mkdir(parents=True, exist_ok=True)
 
-creds = get_mysql_credentials("dw_real")
+import re
+m = re.search(r"beaver-(dw_real|dw|nova|neutron)-", codex_dir.name)
+DATASET = m.group(1) if m else "dw_real"
+creds = get_mysql_credentials(DATASET)
 judge_path = codex_dir / "summary_judge.json"
 stored = {x["id"]: x["judged"] for x in json.load(open(judge_path, encoding="utf-8"))["details"]} if judge_path.exists() else {}
-questions = dev_questions()
+questions = dev_questions(DATASET)
 
 if not stored:
     sys.path.insert(0, str(EVAL / "selectors"))
@@ -69,4 +73,4 @@ json.dump(log, open(out / "concur_selection.json", "w", encoding="utf-8"), inden
 from collections import Counter
 print(f"wrote {len(log)} single-answer predictions to {out}")
 print("selection sources:", dict(Counter(x["how"].split(":")[0] for x in log)))
-print(f"score with: python evaluate_ex_acc.py --dataset dw_real --input_dir {out.relative_to(EVAL) if out.is_relative_to(EVAL) else out}")
+print(f"score with: python evaluate_ex_acc.py --dataset {DATASET} --input_dir {out.relative_to(EVAL) if out.is_relative_to(EVAL) else out}")
