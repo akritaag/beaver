@@ -65,7 +65,17 @@ course name but does not return it); they are scored as released.
 
 ## Reproduce
 
-Generator (from `eval/myagent`; the `dw` best config from `RESULTS.md`):
+One command, from `eval/`, runs both stages and prints the generator's
+pass@1 and pass@3 and Concur's pass@1 (needs the database, logged-in
+`codex` and `claude` CLIs, and `uv`):
+
+```bash
+./concur.sh --dataset dw_real --setting 2
+./concur.sh --dataset dw --setting 2
+```
+
+The steps it runs, for running them separately. Generator (from
+`eval/myagent`; the `dw` best config from `RESULTS.md`):
 
 ```bash
 CODEX_SQL_FIX=1 CODEX_SQL_EXPLORE=1 CODEX_STYLE_GUIDE=1 CODEX_SCHEMA_SKILL=1 \
