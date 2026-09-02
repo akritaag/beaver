@@ -87,7 +87,7 @@ from agent_common import (  # noqa: E402
 )
 
 # shutil.which resolves the platform's actual executable (codex.cmd on
-# Windows, codex elsewhere) — bare names in subprocess skip that resolution.
+# Windows, codex elsewhere); bare names in subprocess skip that resolution.
 CODEX_BIN = os.getenv("CODEX_BIN") or shutil.which("codex") or "codex"
 CODEX_MODEL = os.getenv("CODEX_MODEL")
 CODEX_REASONING_EFFORT = os.getenv("CODEX_REASONING_EFFORT", "low")
@@ -116,10 +116,6 @@ CODEX_REVIEW_STEPS = int(os.getenv("CODEX_REVIEW_STEPS", "4"))
 CODEX_STYLE_GUIDE = os.getenv("CODEX_STYLE_GUIDE", "0") not in ("0", "", "false", "False")
 # Schema skill: per-table data facts profiled read-only from the DB (gold-blind).
 CODEX_SCHEMA_SKILL = os.getenv("CODEX_SCHEMA_SKILL", "0") not in ("0", "", "false", "False")
-# Grain experiment: replace style-guide rule 3 (blanket "no DISTINCT") with a
-# data-driven rule, and inject per-question join fan-out facts profiled from
-# the live DB (dw_grain_facts.json, built by grain_profile.py). Gold-blind.
-CODEX_GRAIN = os.getenv("CODEX_GRAIN", "0") not in ("0", "", "false", "False")
 # Emit N candidate queries spanning the plausible readings of an ambiguous
 # question (1 = classic single answer). Candidates are stored in one .sql file
 # joined by _CANDIDATE_SEP; score with evaluate_ex_acc.py --multi.
@@ -142,42 +138,6 @@ def _schema_skill_section(tables):
         "\n\n### Database facts (profiled read-only from the live dw database)\n"
         + "\n\n".join(parts)
     )
-
-
-_GRAIN_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dw_grain_facts.json")
-_grain_cache = None
-
-
-def _grain_section(qid):
-    """Per-question join fan-out facts (which hinted joins multiply which
-    entity columns). Empty string if the question was not profiled."""
-    global _grain_cache
-    if _grain_cache is None:
-        import json
-        with open(_GRAIN_PATH, encoding="utf-8") as f:
-            _grain_cache = json.load(f)
-    block = _grain_cache.get(qid)
-    if not block:
-        return ""
-    if isinstance(block, list):
-        block = "\n".join(block)
-    return "\n\n### Grain facts for this question (profiled read-only)\n" + block
-
-
-_GRAIN_RULE_3 = """\
-3. Decide DISTINCT from the grain facts, not from habit. If a column you are
-   counting belongs to a table whose rows are multiplied by the hinted join
-   path (see "Grain facts"), count that entity with COUNT(DISTINCT <its key>);
-   if the join path does not multiply it, use plain COUNT. Never add DISTINCT
-   where the facts show no duplication."""
-
-
-def _style_guide_for_run():
-    if not CODEX_GRAIN:
-        return _STYLE_GUIDE
-    import re
-    return re.sub(r"3\. Aggregate over the raw join result\..*?(?=\n4\. )", _GRAIN_RULE_3,
-                  _STYLE_GUIDE, count=1, flags=re.S)
 
 
 # ----------------------- Codex CLI invocation -----------------------
@@ -510,11 +470,9 @@ def run_agent(instance: dict, model: str = None) -> str:
     # model is selected by the CODEX_MODEL env var, not this argument.
     base = render_prompt(instance)
     if CODEX_STYLE_GUIDE:
-        base += _style_guide_for_run()
+        base += _STYLE_GUIDE
     if CODEX_SCHEMA_SKILL:
         base += _schema_skill_section(instance.get("tables") or [])
-    if CODEX_GRAIN:
-        base += _grain_section(instance.get("id"))
     db = instance.get("db") or "dw"
     question = instance.get("question", "")
     if CODEX_DECOMPOSE and not CODEX_SQL_EXPLORE:
