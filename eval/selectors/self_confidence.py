@@ -49,13 +49,25 @@ def ask(question, sql, prev):
         "likely. Reply with ONLY an integer 0-100.\n\n"
         f"QUESTION:\n{question}\n\nSQL:\n{sql[:2500]}\n\nEXECUTED RESULT:\n{prev}\n"
     )
+    import tempfile
+    fd, last_msg = tempfile.mkstemp(prefix="conf_", suffix=".txt")
+    os.close(fd)
     try:
-        p = subprocess.run([codex, "exec", "--skip-git-repo-check", "--sandbox", "read-only", "-"],
-                           input=prompt, capture_output=True, text=True, encoding="utf-8", timeout=180)
-        m = re.findall(r"\b(\d{1,3})\b", (p.stdout or "")[-200:])
-        return int(m[-1]) if m else None
+        # -o writes only the model's final message, avoiding codex's stdout
+        # header/footer (which includes a "tokens used" number).
+        subprocess.run([codex, "exec", "--skip-git-repo-check", "--sandbox", "read-only", "-o", last_msg, "-"],
+                       input=prompt, capture_output=True, text=True, encoding="utf-8", timeout=180)
+        text = open(last_msg, encoding="utf-8").read() if os.path.exists(last_msg) else ""
+        m = re.findall(r"\b(\d{1,3})\b", text)
+        v = int(m[0]) if m else None
+        return v if v is not None and 0 <= v <= 100 else None
     except Exception:
         return None
+    finally:
+        try:
+            os.remove(last_msg)
+        except OSError:
+            pass
 
 
 rows = []
