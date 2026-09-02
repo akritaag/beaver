@@ -70,7 +70,7 @@ from agent_common import (  # noqa: E402
 )
 
 # shutil.which resolves the platform's actual executable (claude.cmd on
-# Windows, claude elsewhere) — bare names in subprocess skip that resolution.
+# Windows, claude elsewhere); bare names in subprocess skip that resolution.
 CLAUDE_BIN = os.getenv("CLAUDE_BIN") or shutil.which("claude") or "claude"
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL")  # None -> claude's default model; e.g. "opus", "sonnet"
 CLAUDE_EFFORT = os.getenv("CLAUDE_EFFORT")  # None -> default; e.g. "high" (--effort)

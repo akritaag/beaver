@@ -49,7 +49,7 @@ def ask_judge(question, blocks):
         "returned sensible rows)."
         + (" Candidate 1 is the primary answer from a strong model: keep it unless "
            "you are CLEARLY convinced its result is wrong AND another candidate's "
-           "result is right — when in doubt, answer 1."
+           "result is right, when in doubt, answer 1."
            if CONSERVATIVE else "")
         + " Reply with EXACTLY one character: 1, 2, or 3."
     )

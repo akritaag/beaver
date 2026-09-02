@@ -45,6 +45,6 @@ echo "=== verify ==="
 "$D" exec beaver-mysql sh -c 'exec mysql -u root -p"$MYSQL_ROOT_PASSWORD" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=\"dw\";"' 2>/dev/null
 echo "(expect 97)"
 "$D" exec beaver-mysql sh -c 'exec mysql -u root -p"$MYSQL_ROOT_PASSWORD" -N -e "SELECT COUNT(*) FROM dw.employee_directory;"' 2>/dev/null \
-  && echo "LOWERCASE TABLE NAME RESOLVES — case-insensitivity confirmed" \
+  && echo "LOWERCASE TABLE NAME RESOLVES, case-insensitivity confirmed" \
   || echo "FATAL: lowercase reference still fails"
 echo "REBUILD_DONE"
