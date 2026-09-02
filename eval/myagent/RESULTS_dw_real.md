@@ -5,13 +5,14 @@ actual MIT warehouse query logs (`dw_real/dev.json`, the seed corpus the
 synthetic sets were expanded from). Codex CLI = `gpt-5.6-sol` via ChatGPT
 login; Claude CLI = `claude-opus-5`. Everything gold-blind.
 
-Scoring gotcha first, because it moves every number: 12/121 gold queries
-reference lowercase table names (`dw.employee_directory`, ...). MySQL on macOS
-is case-insensitive and runs them; a default Linux server errors them out, and
-the scorer then treats gold as empty. Numbers below are from a rebuilt DB with
+Scoring gotcha first, because it moves every number: 15/121 gold queries
+depend on case-insensitive identifiers: 12 reference lowercase table names
+(`dw.employee_directory`, ...) and 3 (dw_real_20/49/57) refer to a table alias
+in a different case than it was declared. MySQL on macOS is case-insensitive
+and runs them all; a default Linux server errors them out, and the scorer then
+treats gold as empty. Numbers below are from a rebuilt DB with
 `--lower-case-table-names=1` (= macOS-comparable). On a strict-case server
-everything drops 2–4 points from gold-side failures alone. Three further golds
-(dw_real_20/49/57) have broken column refs and fail everywhere.
+everything drops 2–4 points from gold-side failures alone.
 
 ## Scoreboard (`dw_real`, full 121-question `dev`, high effort)
 
@@ -50,8 +51,8 @@ But the pipeline still wins end-to-end: 3 candidates + a gold-blind selector →
 recovers more than rule 3 costs. The techniques' value routes through
 selection, not through the first guess.
 
-Taxonomy totals: underdetermined 40, gold-suspect 26 (12 = the lowercase golds,
-3 = broken columns, ~11 semantic), model-error 20, evaluator-artifact 2,
+Taxonomy totals: underdetermined 40, gold-suspect 26 (15 = identifier-case
+failures, 14 semantic, with some overlap in categorization), model-error 20, evaluator-artifact 2,
 hint-backfire 1. On `dw` hint-backfire was 10/65; on real questions the
 decomposition hints almost never contradict the final question.
 
@@ -88,11 +89,13 @@ interaction; the numbers are the simulated ceiling (`selectors/cascade_tiers.py`
 ## For upstream
 
 - Document the case-sensitivity requirement (`lower_case_table_names=1`) or
-  regenerate the 12 lowercase golds; scoring is currently platform-dependent.
-- dw_real_20/49/57 golds don't execute anywhere (bad column refs).
-- ~11 more golds look inconsistent with their question text (fan-out-inflated
-  sums, missing/extra columns), the same class the paper's own error analysis
-  reports.
+  regenerate the 15 case-dependent golds (12 lowercase table names, 3 alias
+  case mismatches: dw_real_20/49/57); scoring is currently platform-dependent.
+- 14 golds look inconsistent with their question text (fan-out-inflated sums,
+  e.g. dw_real_77 reports building E37's area as 13,135,200 = 218,920 x 60
+  joined rows; requested columns omitted, e.g. dw_real_44 groups by course name
+  but does not return it), the same class the paper's own error analysis
+  reports. Two verified by hand; the rest categorized from dossiers.
 
 ## Portability
 

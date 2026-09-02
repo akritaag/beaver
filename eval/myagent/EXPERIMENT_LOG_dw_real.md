@@ -221,9 +221,12 @@ harmful, and been wrong about the pipeline while being right about the prior.
 ## 8. The benchmark was measuring the platform
 
 Reading the dossiers, an agent flagged golds that did not execute. An audit
-found 15 of 121: twelve referenced tables in lowercase (`dw.employee_directory`),
-which MySQL on macOS resolves and a default Linux server does not; three had
-broken column references and fail everywhere. The scorer treats a failed gold
+found 15 of 121: twelve referenced tables in lowercase (`dw.employee_directory`)
+and three referred to a table alias in a different case than declared; MySQL
+on macOS resolves all of them and a default Linux server does not. (We first
+read the three alias cases as broken column references; re-running them on
+the rebuilt database showed they execute fine, which is its own small lesson
+about checking a claim on the fixed system before repeating it.) The scorer treats a failed gold
 as an empty result, so a prediction "matched" those twelve by also erroring.
 Every number we had was therefore a strict-case number, while anything scored
 on a Mac, including presumably the paper's own, was lenient-case. We rebuilt
